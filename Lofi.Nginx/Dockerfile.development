@@ -1,0 +1,6 @@
+FROM nginx:alpine
+EXPOSE 80
+
+COPY nginx.development.conf /etc/nginx/nginx.conf
+
+ENTRYPOINT [ "nginx", "-g", "daemon off;" ]

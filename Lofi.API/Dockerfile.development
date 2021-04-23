@@ -1,0 +1,11 @@
+FROM mcr.microsoft.com/dotnet/sdk:5.0
+VOLUME ["/src"]
+WORKDIR /src
+EXPOSE 80
+
+ENV ASPNETCORE_URLS=http://+:80
+
+COPY Lofi.API.csproj .
+RUN dotnet restore "Lofi.API.csproj"
+
+CMD ["dotnet", "watch", "run"]

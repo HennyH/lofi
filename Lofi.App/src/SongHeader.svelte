@@ -25,6 +25,5 @@
         font-weight: normal;
         font-size: 18pt;
         margin-top: 0.5em;
-        margin-bottom: 0;
     }
 </style>

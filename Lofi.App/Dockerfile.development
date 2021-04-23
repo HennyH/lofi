@@ -1,0 +1,15 @@
+FROM node:alpine
+VOLUME ["/src"]
+WORKDIR /src
+EXPOSE 80
+
+# let the node user access /home/src
+RUN chown -R node: /src
+USER node
+
+# install node dependencies
+COPY package.json .
+RUN npm install
+
+CMD ["npm", "run", "dev"]
+

@@ -1,7 +1,12 @@
+<script>
+    import { link } from "svelte-routing"
+</script>
+
 <header>
     <nav>
         <div class="logo"></div>
         <span class="name">Lofi</span>
+        <a href="/upload" use:link>Upload</a>
     </nav>
 </header>
 

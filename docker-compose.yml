@@ -1,0 +1,45 @@
+# Please refer https://aka.ms/HTTPSinContainer on how to setup an https developer certificate for your ASP .NET Core service.
+
+version: '3.4'
+
+services:
+  api:
+    image: lofi/api
+    build:
+      context: Lofi.API
+    ports:
+      - 8010:80
+    depends_on:
+      - db
+  nginx:
+    image: lofi/nginx
+    build:
+      context: Lofi.Nginx
+    ports:
+      - 80:80
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: "letmein"
+  icecast:
+    build:
+      context: Lofi.Icecast
+    ports:
+      - 8000:8000
+  liquidsoap:
+    build:
+      context: Lofi.Liquidsoap
+    command: liquidsoap /music/stream.liq
+    volumes:
+      - ./Lofi.Liquidsoap:/music
+    depends_on:
+      - icecast
+      - api
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8030:8080

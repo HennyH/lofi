@@ -3,6 +3,12 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# local db files
+app.db
+
+# WSL files
+*Zone.Identifier
+
 # JS files
 /node_modules/
 /**/public/build/

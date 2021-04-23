@@ -1,0 +1,67 @@
+# Please refer https://aka.ms/HTTPSinContainer on how to setup an https developer certificate for your ASP .NET Core service.
+
+version: '3.4'
+
+services:
+  api:
+    image: lofi/api
+    build:
+      context: Lofi.API
+      dockerfile: Dockerfile.development
+    ports:
+      - 8010:80
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+    volumes:
+      - ~/.vsdbg:/remote_debugger:rw
+      - ~/.aspnet/https:/https:ro
+      - ./Lofi.API:/src
+    depends_on:
+      - db
+  app:
+    image: lofi/app
+    build:
+      context: Lofi.App
+      dockerfile: Dockerfile.development
+    ports:
+      - 8020:80
+    environment:
+      - ROLLUP_WATCH=1
+    volumes:
+      - ./Lofi.App:/src
+    depends_on:
+      - api
+  nginx:
+    image: lofi/nginx
+    build:
+      context: Lofi.Nginx
+      dockerfile: Dockerfile.development
+    ports:
+      - 80:80
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: "letmein"
+  icecast:
+    build:
+      context: Lofi.Icecast
+    ports:
+      - 8000:8000
+  liquidsoap:
+    build:
+      context: Lofi.Liquidsoap
+    command: liquidsoap /music/stream.liq
+    volumes:
+      - ./Lofi.Liquidsoap:/music
+    depends_on:
+      - icecast
+      - api
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8030:8080
