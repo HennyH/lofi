@@ -6,8 +6,9 @@
             "type": "docker",
             "request": "attach",
             "platform": "netCore",
+            "processName": "Lofi.API",
             "sourceFileMap": {
-                "/src": "${workspaceFolder}"
+                "/src": "${workspaceFolder}/Lofi.API"
             }
         }
     ]

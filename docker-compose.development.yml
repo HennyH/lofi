@@ -45,21 +45,25 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_PASSWORD: "letmein"
+      POSTGRES_USER: "lofiuser"
+      POSTGRES_PASSWORD: "lofiuser"
+      POSTGRES_DB: "lofi"
+    volumes:
+      - "${PG_DATA_DIR:-pgdata}:/var/lib/postgresql/data"
   icecast:
     build:
       context: Lofi.Icecast
     ports:
       - 8000:8000
-  liquidsoap:
-    build:
-      context: Lofi.Liquidsoap
-    command: liquidsoap /music/stream.liq
-    volumes:
-      - ./Lofi.Liquidsoap:/music
-    depends_on:
-      - icecast
-      - api
+  # liquidsoap:
+  #   build:
+  #     context: Lofi.Liquidsoap
+  #   command: liquidsoap /music/stream.liq
+  #   volumes:
+  #     - ./Lofi.Liquidsoap:/music
+  #   depends_on:
+  #     - icecast
+  #     - api
   adminer:
     image: adminer
     restart: always

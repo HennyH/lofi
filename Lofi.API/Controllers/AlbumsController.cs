@@ -16,18 +16,19 @@ using Microsoft.Extensions.Logging;
 namespace Lofi.API.Controllers
 {
     [ApiController]
-    public class AlbumsController : ControllerBase
-    {
-        private readonly ILogger<AlbumsController> _logger;
+    [Route("api")]
+    public class AlbumController : ControllerBase
+    { 
+        private readonly ILogger<AlbumController> _logger;
         private readonly LofiContext _lofiContext;
 
-        public AlbumsController(ILogger<AlbumsController> logger, LofiContext lofiContext)
+        public AlbumController(ILogger<AlbumController> logger, LofiContext lofiContext)
         {
             this._logger = logger;
             this._lofiContext = lofiContext;
         }
 
-        [HttpPost("/album")]
+        [HttpPost("album")]
         [DisableRequestSizeLimit]
         public async Task<ActionResult> Upload([FromForm] AlbumUploadRequestModel albumUpload)
         {
@@ -98,7 +99,6 @@ namespace Lofi.API.Controllers
             );
             _lofiContext.Albums.Add(album);
             await _lofiContext.SaveChangesAsync();
-            _logger.LogWarning("Uploaded song");
             return StatusCode((int)HttpStatusCode.OK);
         }
     }

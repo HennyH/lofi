@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -12,7 +13,7 @@ namespace Lofi.API.Shared
             using var sha1 = new SHA1Managed();
             using var byteStream = new MemoryStream(bytes);
             var hash = await sha1.ComputeHashAsync(byteStream);
-            return string.Format("{0:x2}", hash);
+            return Convert.ToHexString(hash);
         }
     }
 }

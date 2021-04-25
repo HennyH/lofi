@@ -5,7 +5,8 @@ EXPOSE 80
 
 ENV ASPNETCORE_URLS=http://+:80
 
+COPY dotnet-tools.json .
 COPY Lofi.API.csproj .
-RUN dotnet restore "Lofi.API.csproj"
+RUN dotnet tool restore && dotnet restore
 
 CMD ["dotnet", "watch", "run"]

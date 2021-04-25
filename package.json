@@ -6,6 +6,8 @@
   "scripts": {
     "dev:build": "./scripts/dev-build.sh",
     "dev:up": "./scripts/dev-up.sh",
+    "dev:run": "./scripts/dev-run.sh",
+    "dev:exec": "./scripts/dev-exec.sh",
     "prod:build": "./scripts/prod-build.sh",
     "prod:up": "./scripts/prod-up.sh"
   },
