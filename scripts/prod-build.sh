@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+[ -z "$MONEROD_DATA_DIR" ] && { echo "ERROR: The environment variable MONEROD_DATA_DIR must be configured"; exit 1; }
+
 # build the lofi/app image which the lofi/nginx image will
 # reference, I don't know how to encode such a dependency
 # in the compose file so we have to do it here.

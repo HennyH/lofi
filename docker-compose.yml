@@ -43,3 +43,26 @@ services:
     restart: always
     ports:
       - 8030:8080
+  monerod:
+    image: xmrto/monero:latest
+    command: --testnet --data-dir /monero
+    volumes:
+      - "${MONEROD_DATA_DIR:-~/.bitmonero}:/monero"
+    ports:
+      - 28080:28080
+      - 28081:28081
+    restart: unless-stopped
+  monero-wallet-rpc:
+    image: xmrto/monero:latest
+    command: monero-wallet-rpc --testnet --disable-rpc-login --wallet-dir /monero/wallets
+    volumes:
+      - "${MONEROD_DATA_DIR:-~/.bitmonero}:/monero"
+    environment:
+      - DAEMON_HOST=monerod
+      - DAEMON_PORT=28080
+      - RPC_BIND_PORT=28083
+    ports:
+      - 28083:28083
+    restart: unless-stopped
+    depends_on:
+      - monerod
