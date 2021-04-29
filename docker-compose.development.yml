@@ -16,7 +16,8 @@ services:
     volumes:
       - ~/.vsdbg:/remote_debugger:rw
       - ~/.aspnet/https:/https:ro
-      - ./Lofi.API:/src
+      - ./Lofi.API:/home/app/src
+      - "${MUSIC_DIRECTORY:-~/music}:/music"
     depends_on:
       - db
   app:
@@ -39,6 +40,9 @@ services:
       dockerfile: Dockerfile.development
     ports:
       - 80:80
+    volumes:
+      - "./Lofi.Nginx/nginx.development.conf:/etc/nginx/nginx.conf"
+      - "${MUSIC_DIRECTORY:-~/music}:/var/www/lofi/media"
   db:
     image: postgres
     restart: always
@@ -49,21 +53,7 @@ services:
       POSTGRES_PASSWORD: "lofiuser"
       POSTGRES_DB: "lofi"
     volumes:
-      - "${PG_DATA_DIR:-pgdata}:/var/lib/postgresql/data"
-  icecast:
-    build:
-      context: Lofi.Icecast
-    ports:
-      - 8000:8000
-  # liquidsoap:
-  #   build:
-  #     context: Lofi.Liquidsoap
-  #   command: liquidsoap /music/stream.liq
-  #   volumes:
-  #     - ./Lofi.Liquidsoap:/music
-  #   depends_on:
-  #     - icecast
-  #     - api
+      - "${PG_DATA_DIR:-~/pg}:/var/lib/postgresql/data"
   adminer:
     image: adminer
     restart: always

@@ -1,6 +1,10 @@
 FROM nginx:alpine
 EXPOSE 80
+VOLUME [ "/etc/nginx/nginx.conf", "/var/www/lofi/media" ]
 
-COPY nginx.development.conf /etc/nginx/nginx.conf
 
-ENTRYPOINT [ "nginx", "-g", "daemon off;" ]
+RUN apk add --no-cache inotify-tools
+
+WORKDIR /home/nginx
+COPY entrypoint.dev.sh .
+ENTRYPOINT [ "./entrypoint.dev.sh" ]

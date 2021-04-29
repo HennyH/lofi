@@ -22,7 +22,7 @@
         <label for="artistWallet">Artist Wallet:</label>
         <input id="artistWallet" name="artistWallet" type="text" required />
         <label for="songs">Songs:</label>
-        <input if="songs" name="songs" type="file" multiple required />
+        <input if="songs" name="songs" type="file" maxl multiple required />
         <input type="submit" value="Upload Album" />
     </fieldset>
 </form>

@@ -8,7 +8,7 @@
             "platform": "netCore",
             "processName": "Lofi.API",
             "sourceFileMap": {
-                "/src": "${workspaceFolder}/Lofi.API"
+                "/home/app/src/": "${workspaceFolder}/Lofi.API"
             }
         }
     ]

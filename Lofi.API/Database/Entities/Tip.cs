@@ -5,26 +5,17 @@ namespace Lofi.API.Database.Entities
 {
     public class Tip
     {
-        protected Tip()
-        {
-            this.TransactionHash = null!;
-            this.Song = null!;
-            this.Payee = null!;
-        }
-
-        public Tip(string transactionHash, Song song, Artist payee, DateTime? payedAt = null)
-        {
-            this.TransactionHash = transactionHash;
-            this.Song = song;
-            this.Payee = payee;
-            this.PayedAt = payedAt ?? DateTime.Now;
-        }
-
         [Key]
-        public string TransactionHash { get; set; }
-        public DateTime PayedAt { get; set; }
-        public virtual Song Song { get; set; }
-        public virtual Artist Payee { get; set; }
-        public bool Played { get; set; }
+        public int Id { get; set; }
+        public string? Message { get; set; }
+        [Required]
+        public Track? Track { get; set; }
+        [Required]
+        public int? TrackId { get; set; }
+        public string? IntegratedPaymentAddress { get; set; }
+        public string? TransactionHash { get; set; }
+        public bool IsPaymentConfirmed { get; set; } = false;
+        [Required]
+        public DateTime? TipDate { get; set; }
     }
 }

@@ -18,5 +18,7 @@ COPY --from=builder /home/opam/root /
 RUN apt-get update \
     && cat /liquidsoap/depexts | xargs apt-get install -y --no-install-recommends \
     && ln -s /liquidsoap/bin/liquidsoap /usr/local/bin/liquidsoap
+RUN apt-get install -y --no-install-recommends curl
+COPY stream.liq playlist.pls /etc/liquidsoap/
 ENTRYPOINT [ "liquidsoap" ]
-CMD [ "/music/stream.liq" ]
+CMD [ "/etc/liquidsoap/stream.liq" ]

@@ -6,8 +6,11 @@
   "scripts": {
     "dev:build": "./scripts/dev-build.sh",
     "dev:up": "./scripts/dev-up.sh",
+    "dev:start": "./scripts/dev-start.sh",
+    "dev:stop": "./scripts/dev-stop.sh",
     "dev:run": "./scripts/dev-run.sh",
     "dev:exec": "./scripts/dev-exec.sh",
+    "dev:ef": "./scripts/dev-ef.sh",
     "prod:build": "./scripts/prod-build.sh",
     "prod:up": "./scripts/prod-up.sh"
   },

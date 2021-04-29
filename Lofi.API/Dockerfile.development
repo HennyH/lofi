@@ -1,9 +1,27 @@
 FROM mcr.microsoft.com/dotnet/sdk:5.0
-VOLUME ["/src"]
-WORKDIR /src
-EXPOSE 80
+EXPOSE 8010
+VOLUME [ "/home/app/src/" ]
+ENV ASPNETCORE_URLS=http://+:8010 \
+    DOTNET_RUNNING_IN_CONTAINER=true
 
-ENV ASPNETCORE_URLS=http://+:80
+RUN groupadd \
+        --system \
+        # exit successfully if the group already exists
+        --force \
+        --gid ${GROUP_ID:-1000} \
+        app \
+    && useradd \
+        --system \
+        # the primary group of our user should be the app group
+        # we just created
+        --gid ${GROUP_ID:-1000} \
+        --uid ${USER_ID:-1000} \
+        --home-dir /home/app \
+        --create-home \
+        app
+USER app
+
+WORKDIR /home/app/src/
 
 COPY dotnet-tools.json .
 COPY Lofi.API.csproj .

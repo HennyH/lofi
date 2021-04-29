@@ -9,6 +9,8 @@ services:
       context: Lofi.API
     ports:
       - 8010:80
+    volumes:
+      - "${MUSIC_DIRECTORY:-~/music}:/music"
     depends_on:
       - db
   nginx:
@@ -17,6 +19,8 @@ services:
       context: Lofi.Nginx
     ports:
       - 80:80
+    volumes:
+      - "${MUSIC_DIRECTORY:-~/music}:/var/www/lofi/media"
   db:
     image: postgres
     restart: always
@@ -28,20 +32,6 @@ services:
       POSTGRES_DB: "lofi"
     volumes:
       - "${PG_DATA_DIR:-pgdata}:/var/lib/postgresql/data"
-  icecast:
-    build:
-      context: Lofi.Icecast
-    ports:
-      - 8000:8000
-  liquidsoap:
-    build:
-      context: Lofi.Liquidsoap
-    command: liquidsoap /music/stream.liq
-    volumes:
-      - ./Lofi.Liquidsoap:/music
-    depends_on:
-      - icecast
-      - api
   adminer:
     image: adminer
     restart: always

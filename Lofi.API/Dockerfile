@@ -1,8 +1,8 @@
 FROM mcr.microsoft.com/dotnet/aspnet:5.0 AS base
 WORKDIR /app
-EXPOSE 80
+EXPOSE 8010
 
-ENV ASPNETCORE_URLS=http://+:80
+ENV ASPNETCORE_URLS=http://+:8010
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-dotnet-configure-containers
@@ -21,5 +21,6 @@ RUN dotnet publish "Lofi.API.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
+ENV MUSIC_DIRECTORY "/music"
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Lofi.API.dll"]

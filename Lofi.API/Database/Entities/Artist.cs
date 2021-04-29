@@ -1,23 +1,16 @@
-using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace Lofi.API.Database.Entities
 {
     public class Artist
     {
-        public Artist(string name, string walletAddress, string gpgPublicKey, string? reference = null)
-        {
-            this.Name = name;
-            this.WalletAddress = walletAddress;
-            this.GpgPublicKey = gpgPublicKey;
-            this.Reference = reference;
-        }
-
+        [Key]
         public int Id { get; set; }
-        public string Name { get; set; }
-        public string? Reference { get; set; }
-        public string WalletAddress { get; set; }
-        public string GpgPublicKey { get; set; }
-        public ICollection<Album> Albums { get; set; } = new List<Album>();
-        public ICollection<Song> Songs { get; set; } = new List<Song>();
+        [Required]
+        public string? Name { get; set; }
+        [Required]
+        public string? WalletAddress { get; set; }
+        public UploadedFile? ProfilePicture { get; set; }
     }
 }

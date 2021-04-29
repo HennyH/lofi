@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Lofi.API.Database;
+using Lofi.API.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -30,11 +32,15 @@ namespace Lofi.API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            });
 
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Lofi.API", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Lofi.API", Version = "v1" }); 
             });
 
             services.AddDbContext<LofiContext>(options => options.UseNpgsql(Configuration.GetConnectionString("LofiContext")));
@@ -42,6 +48,10 @@ namespace Lofi.API
             {
                 services.AddDatabaseDeveloperPageExceptionFilter();
             }
+
+            services.AddScoped<AlbumService>();
+            services.AddScoped<GenreService>();
+            services.AddScoped<TrackService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -51,7 +61,11 @@ namespace Lofi.API
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Lofi.API v1"));
+                app.UseSwaggerUI(c =>
+                {
+                    c.RoutePrefix = "swagger";
+                    c.SwaggerEndpoint("v1/swagger.json", "Lofi.API v1");
+                });
             }
 
             // lofiContext.Database.EnsureCreated();
