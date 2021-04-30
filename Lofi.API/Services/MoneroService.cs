@@ -6,6 +6,9 @@ using RpcParameters = Lofi.API.Models.MoneroRpc.Parameters;
 using RpcResults = Lofi.API.Models.MoneroRpc.Results;
 using System.Text.Json;
 using System.Threading;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Lofi.API.Shared;
 
 namespace Lofi.API.Services
 {
@@ -16,18 +19,24 @@ namespace Lofi.API.Services
         public const string MAKE_URI = "make_uri";
         public const string GET_ACCOUNTS = "get_accounts";
         public const string GET_ADDRESS = "get_address";
+        public const string GET_PAYMENTS = "get_payments";
+        public const string GET_TRANSFERS = "get_transfers";
     }
 
     public class MoneroService
     {
-        private readonly string _daemonRpcUri;
-        private readonly string _walletRpcUri;
+        private const string DEFAULT_MONERO_DAEMON_RPC_URI = "http://monerod:28081/json_rpc";
+        private const string DEFAULT_MONERO_WALLET_RPC_URI = "http://monero-wallet-rpc:28083/json_rpc";
+        private ILogger<MoneroService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
-        public MoneroService(IHttpClientFactory httpClientFactory, string daemonRpcUri, string walletRpcUri)
+        private readonly string _deamonRpcUri;
+        private readonly string _walletRpcUri;
+        public MoneroService(ILogger<MoneroService> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory)
         {
+            this._logger = logger;
             this._httpClientFactory = httpClientFactory;
-            this._daemonRpcUri = daemonRpcUri;
-            this._walletRpcUri = walletRpcUri;
+            this._deamonRpcUri = configuration.GetValue<string>("MONERO_DAEMON_RPC_URI", DEFAULT_MONERO_DAEMON_RPC_URI);
+            this._walletRpcUri = configuration.GetValue<string>("MONERO_WALLET_RPC_URI", DEFAULT_MONERO_WALLET_RPC_URI);
         }
 
         public async Task<MoneroRpcResponse<TResult>> PerformWalletRpc<TParameters, TResult>(
@@ -45,13 +54,13 @@ namespace Lofi.API.Services
             
             using var httpClient = _httpClientFactory.CreateClient();
             var httpContent = rpcRequest.AsHttpContent();
-            Console.WriteLine(await rpcRequest.AsHttpContent().ReadAsStringAsync());
+            _logger.LogInformation(LogEvent.MONERO_RPC_REQUEST, await httpContent.ReadAsStringAsync());
             using var httpResponse = await httpClient.PostAsync(_walletRpcUri, httpContent, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             httpResponse.EnsureSuccessStatusCode();
 
             var json = await httpResponse.Content.ReadAsStringAsync();
-            Console.WriteLine(json);
+            _logger.LogInformation(LogEvent.MONERO_RPC_RESPONSE, json);
             var response = JsonSerializer.Deserialize<MoneroRpcResponse<TResult>>(json);
             cancellationToken.ThrowIfCancellationRequested();
             if (response == null
@@ -103,6 +112,24 @@ namespace Lofi.API.Services
         {
             return await PerformWalletRpc<RpcParameters.GetAddressRpcParameters, RpcResults.GetAddressRpcResult>(
                 MoneroWalletRpcMethod.GET_ADDRESS,
+                parameters,
+                cancellationToken: cancellationToken
+            );
+        }
+
+        public async Task<MoneroRpcResponse<RpcResults.GetPaymentsRpcResult>> GetPayments(RpcParameters.GetPaymentsRpcParameters parameters, CancellationToken cancellationToken = default)
+        {
+            return await PerformWalletRpc<RpcParameters.GetPaymentsRpcParameters, RpcResults.GetPaymentsRpcResult>(
+                MoneroWalletRpcMethod.GET_PAYMENTS,
+                parameters,
+                cancellationToken: cancellationToken
+            );
+        }
+
+        public async Task<MoneroRpcResponse<RpcResults.GetTransfersRpcResult>> GetTransfers(RpcParameters.GetTransfersRpcParameters parameters, CancellationToken cancellationToken = default)
+        {
+            return await PerformWalletRpc<RpcParameters.GetTransfersRpcParameters, RpcResults.GetTransfersRpcResult>(
+                MoneroWalletRpcMethod.GET_TRANSFERS,
                 parameters,
                 cancellationToken: cancellationToken
             );

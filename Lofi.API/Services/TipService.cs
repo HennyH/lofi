@@ -4,42 +4,50 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lofi.API.Database;
 using Lofi.API.Database.Entities;
+using Lofi.API.Models.MoneroRpc;
 using Lofi.API.Models.MoneroRpc.Parameters;
+using Lofi.API.Models.MoneroRpc.Results;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Lofi.API.Services
 {
     public class TipService
     {
+        private const string DEFAULT_LOFI_WALLET_FILE = "testwallet";
+        private const string DEFAULT_LOFI_WALLET_PASSWORD = "";
+        private readonly ILogger<TipService> _logger;
         private readonly LofiContext _lofiContext;
         private readonly MoneroService _moneroService;
         private readonly string _lofiWalletFile;
         private readonly string _lofiWalletPassword;
 
-        public TipService(LofiContext lofiContext, MoneroService moneroSerivce, string lofiWalletFile, string lofiWalletPassword)
+        public TipService(ILogger<TipService> logger, IConfiguration configuration, LofiContext lofiContext, MoneroService moneroSerivce)
         {
+            this._logger = logger;
             this._lofiContext = lofiContext;
             this._moneroService = moneroSerivce;
-            this._lofiWalletFile = lofiWalletFile;
-            this._lofiWalletPassword = lofiWalletPassword;
+            this._lofiWalletFile = configuration.GetValue<string>("LOFI_WALLET_FILE", DEFAULT_LOFI_WALLET_FILE);
+            this._lofiWalletPassword = configuration.GetValue<string>("LOFI_WALLET_PASSWORD", DEFAULT_LOFI_WALLET_PASSWORD);
         }
 
         public async Task<ushort?> GetAvailablePaymentId(CancellationToken cancellationToken = default)
         {
             var availablePaymentId = await _lofiContext.Tips
-                .Where(t => t.TransactionConfirmedDate.HasValue)
+                .Where(t => t.BlockHeight.HasValue)
                 .Select(t => t.PaymentId)
                 .FirstOrDefaultAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (availablePaymentId != default) return availablePaymentId.Value;
 
             var highestPaymentIdInUser = await _lofiContext.Tips
-                .Where(t => !t.TransactionConfirmedDate.HasValue)
+                .Where(t => !t.BlockHeight.HasValue)
                 .Select(t => t.PaymentId)
                 .OrderByDescending(id => id)
                 .FirstOrDefaultAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            if (highestPaymentIdInUser == null) return UInt16.MinValue;
+            if (highestPaymentIdInUser == null) return UInt16.MinValue + 1;
             if (highestPaymentIdInUser.Value < UInt16.MaxValue) return (ushort)(highestPaymentIdInUser.Value + 1);
 
             return null;
@@ -80,12 +88,10 @@ namespace Lofi.API.Services
             var tip = await _lofiContext.Tips.FindAsync(new object[] { tipId }, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (tip == null) throw new ArgumentException(nameof(tipId), $"No such tip with Id = {tipId}");
+            if (tip.IntegratedPaymentAddress == null) throw new Exception("Cannot get a payment URL for at tip with no integrated address");
 
             await _moneroService.OpenWalletAsync(new OpenWalletRpcParameters(_lofiWalletFile, _lofiWalletPassword), cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-
-            var address = await _moneroService.GetAddress(new GetAddressRpcParameters(0));
-            var lofiWalletAddress = address.Result.Address;
 
             var artistNames = await _lofiContext.Entry(tip)
                 .Reference(t => t.Track)
@@ -95,12 +101,35 @@ namespace Lofi.API.Services
                 .ToListAsync();
             
             var uri = await _moneroService.MakeUri(new MakeUriRpcParameters(
-                address: lofiWalletAddress,
+                address: tip.IntegratedPaymentAddress,
                 amount: amount,
                 recipientName: string.Join(", ", artistNames),
                 transactionDescription: tip.Message
             ));
             return uri.Result.Uri;
+        }
+
+        public async Task<MoneroRpcResponse<GetTransfersRpcResult>> GetTransfers(CancellationToken cancellationToken = default)
+        {
+            await _moneroService.OpenWalletAsync(new OpenWalletRpcParameters(_lofiWalletFile, _lofiWalletPassword), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return await _moneroService.GetTransfers(new GetTransfersRpcParameters
+            {
+                In = true,
+                Out = true,
+                Pending = true,
+                Failed = true,
+                Pool = true
+            });
+        }
+
+        public async Task<MoneroRpcResponse<GetPaymentsRpcResult>> GetPayments(ushort paymentId, CancellationToken cancellationToken)
+        {
+            await _moneroService.OpenWalletAsync(new OpenWalletRpcParameters(_lofiWalletFile, _lofiWalletPassword), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return await _moneroService.GetPayments(new GetPaymentsRpcParameters(paymentId));
         }
     }
 }

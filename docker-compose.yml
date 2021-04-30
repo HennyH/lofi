@@ -38,7 +38,7 @@ services:
     ports:
       - 8030:8080
   monerod:
-    image: xmrto/monero:latest
+    image: xmrto/monero:v0.17.2.0
     command: --testnet --data-dir /monero
     volumes:
       - "${MONEROD_DATA_DIR:-~/.bitmonero}:/monero"
@@ -47,7 +47,7 @@ services:
       - 28081:28081
     restart: unless-stopped
   monero-wallet-rpc:
-    image: xmrto/monero:latest
+    image: xmrto/monero:v0.17.2.0
     command: monero-wallet-rpc --testnet --disable-rpc-login --wallet-dir /monero/wallets
     volumes:
       - "${MONEROD_DATA_DIR:-~/.bitmonero}:/monero"

@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lofi.API.Database.Entities;
+using Lofi.API.Models.MoneroRpc;
+using Lofi.API.Models.MoneroRpc.Results;
 using Lofi.API.Models.Requests;
 using Lofi.API.Services;
 using Lofi.API.Shared;
@@ -45,5 +47,18 @@ namespace Lofi.API.Controllers
             var qrCode = QRCodeUtils.CreateBmpQrCode(paymentUrl);
             return File(qrCode, "image/bmp");
         }
+
+        [HttpGet("transfers")]
+        public async Task<MoneroRpcResponse<GetTransfersRpcResult>> GetTransfers(CancellationToken cancellationToken)
+        {
+            return await _tipService.GetTransfers(cancellationToken);
+        }
+
+        [HttpGet("payments")]
+        public async Task<MoneroRpcResponse<GetPaymentsRpcResult>> GetPayments([FromQuery] ushort paymentId, CancellationToken cancellationToken)
+        {
+            return await _tipService.GetPayments(paymentId, cancellationToken);
+        }
+        
     }
 }

@@ -29,7 +29,7 @@ namespace Lofi.API.Models.MoneroRpc
         public StringContent AsHttpContent()
         {
             return new StringContent(
-                JsonSerializer.Serialize(this),
+                JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }),
                 Encoding.UTF8,
                 MediaTypeNames.Application.Json
             );

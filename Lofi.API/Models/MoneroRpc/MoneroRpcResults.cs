@@ -15,9 +15,9 @@ namespace Lofi.API.Models.MoneroRpc.Results
         }
 
         [JsonPropertyName("integrated_address")]
-        public string IntegratedAddress {get;set;}
+        public string IntegratedAddress { get; set; }
         [JsonPropertyName("payment_id")]
-        public string PaymentId {get;set;}
+        public string PaymentId { get; set; }
     }
 
     public class MakeUriRpcResult
@@ -28,36 +28,36 @@ namespace Lofi.API.Models.MoneroRpc.Results
         }
 
         [JsonPropertyName("uri")]
-        public string Uri {get;set;}
+        public string Uri { get; set; }
     }
-    
+
     public class GetAccountsRpcResult
     {
         public GetAccountsRpcResult(
                 IEnumerable<SubaddressAccount> subaddressAccounts,
-                uint totalBalance,
-                uint totalUnlockedBalance
+                ulong totalBalance,
+                ulong totalUnlockedBalance
             )
         {
             this.SubaddressAccounts = subaddressAccounts;
             this.TotalBalance = totalBalance;
-            this.TotalUnlockedBalance = totalUnlockedBalance; 
+            this.TotalUnlockedBalance = totalUnlockedBalance;
         }
 
         [JsonPropertyName("subaddress_accounts ")]
-        public IEnumerable<SubaddressAccount> SubaddressAccounts {get;set;}
+        public IEnumerable<SubaddressAccount> SubaddressAccounts { get; set; }
         [JsonPropertyName("total_balance")]
-        public uint TotalBalance {get;set;}
+        public ulong TotalBalance { get; set; }
         [JsonPropertyName("total_unlocked_balance ")]
-        public uint TotalUnlockedBalance {get;set;}
+        public ulong TotalUnlockedBalance { get; set; }
 
         public class SubaddressAccount
         {
             public SubaddressAccount(
-                    uint accountIndex,
-                    uint balance,
+                    ulong accountIndex,
+                    ulong balance,
                     string baseAddress,
-                    uint unlockedBalance,
+                    ulong unlockedBalance,
                     string? label = null,
                     string? tag = null
                 )
@@ -71,17 +71,17 @@ namespace Lofi.API.Models.MoneroRpc.Results
             }
 
             [JsonPropertyName("account_index")]
-            public uint AccountIndex {get;set;}
+            public ulong AccountIndex { get; set; }
             [JsonPropertyName("balance")]
-            public uint Balance {get;set;}
+            public ulong Balance { get; set; }
             [JsonPropertyName("base_address")]
-            public string BaseAddress {get;set;}
+            public string BaseAddress { get; set; }
             [JsonPropertyName("label")]
-            public string? Label {get;set;}
+            public string? Label { get; set; }
             [JsonPropertyName("tag")]
-            public string? Tag {get;set;}
+            public string? Tag { get; set; }
             [JsonPropertyName("unlocked_balance")]
-            public uint UnlockedBalance {get;set;}
+            public ulong UnlockedBalance { get; set; }
         }
     }
 
@@ -90,16 +90,16 @@ namespace Lofi.API.Models.MoneroRpc.Results
         public GetAddressRpcResult(string address, IEnumerable<Subaddress> addresses)
         {
             this.Address = address;
-            this.Addresses =addresses;
+            this.Addresses = addresses;
         }
 
         [JsonPropertyName("address")]
-        public string Address {get;set;}
+        public string Address { get; set; }
         [JsonPropertyName("addresses")]
-        public IEnumerable<Subaddress> Addresses {get;set;}
+        public IEnumerable<Subaddress> Addresses { get; set; }
         public class Subaddress
         {
-            public Subaddress(string address, string label, uint addressIndex, bool used)
+            public Subaddress(string address, string label, ulong addressIndex, bool used)
             {
                 this.Address = address;
                 this.Label = label;
@@ -108,14 +108,166 @@ namespace Lofi.API.Models.MoneroRpc.Results
             }
 
             [JsonPropertyName("address")]
-            public string Address {get;set;}
+            public string Address { get; set; }
             [JsonPropertyName("label")]
-            public string Label {get;set;}
+            public string Label { get; set; }
             [JsonPropertyName("address_index")]
-            public uint AddressIndex {get;set;}
+            public ulong AddressIndex { get; set; }
             [JsonPropertyName("used")]
-            public bool Used {get;set;}
+            public bool Used { get; set; }
 
+        }
+    }
+
+    public class PaymentSubaddressIndexRpcResult
+        {
+            public PaymentSubaddressIndexRpcResult(ulong major, ulong minor)
+            {
+                this.Major = major;
+                this.Minor = minor;
+            }
+
+            [JsonPropertyName("major")]
+            public ulong Major { get; set; }
+            [JsonPropertyName("minor")]
+            public ulong Minor { get; set; }
+        }
+
+    public class GetPaymentsRpcResult
+    {
+        public GetPaymentsRpcResult(IEnumerable<Payment> payments)
+        {
+            this.Payments = payments;
+        }
+
+        [JsonPropertyName("payments")]
+        public IEnumerable<Payment> Payments { get; set; }
+
+        public class Payment
+        {
+            public Payment(
+                    string paymentId,
+                    string transactionHash,
+                    ulong blockHeight,
+                    ulong unlockTime,
+                    PaymentSubaddressIndexRpcResult subaddressIndex,
+                    string address
+                )
+            {
+                this.PaymentId = paymentId;
+                this.TransactionHash = transactionHash;
+                this.BlockHeight = blockHeight;
+                this.UnlockTime = unlockTime;
+                this.SubaddressIndex = subaddressIndex;
+                this.Address = address;
+            }
+
+            [JsonPropertyName("payment_id")]
+            public string PaymentId { get; set; }
+            [JsonPropertyName("tx_hash")]
+            public string TransactionHash { get; set; }
+            [JsonPropertyName("block_height")]
+            public ulong BlockHeight { get; set; }
+            [JsonPropertyName("unlock_time")]
+            public ulong UnlockTime { get; set; }
+            [JsonPropertyName("subaddr_index")]
+            public PaymentSubaddressIndexRpcResult SubaddressIndex { get; set; }
+            [JsonPropertyName("address")]
+            public string Address { get; set; }
+        }
+    }
+
+    public class GetTransfersRpcResult
+    {
+        public GetTransfersRpcResult(
+                IEnumerable<Transfer> inTransfers,
+                IEnumerable<Transfer> outTransfers,
+                IEnumerable<Transfer> pendingTransfers,
+                IEnumerable<Transfer> failedTransfers,
+                IEnumerable<Transfer> poolTransfers
+            )
+        {
+            this.InTransfers = inTransfers;
+            this.OutTransfers = outTransfers;
+            this.PendingTransfers =pendingTransfers;
+            this.FailedTransfers = failedTransfers;
+            this.PoolTransfers = poolTransfers;
+        }
+
+        [JsonPropertyName("in")]
+        public IEnumerable<Transfer> InTransfers { get; set; }
+        [JsonPropertyName("out")]
+        public IEnumerable<Transfer> OutTransfers { get; set; }
+        [JsonPropertyName("pending")]
+        public IEnumerable<Transfer> PendingTransfers { get; set; }
+        [JsonPropertyName("failed")]
+        public IEnumerable<Transfer> FailedTransfers { get; set; }
+        [JsonPropertyName("pool")]
+        public IEnumerable<Transfer> PoolTransfers { get; set; }
+
+        public class Transfer
+        {
+            public Transfer(
+                    string address,
+                    ulong amount,
+                    ulong confirmations,
+                    bool doubleSpendSeen,
+                    ulong fee,
+                    ulong height,
+                    string note,
+                    string paymentId,
+                    PaymentSubaddressIndexRpcResult subaddressIndex,
+                    ulong suggestedConfirmationsThreshold,
+                    ulong timestamp,
+                    string transactionId,
+                    string transferType,
+                    ulong unlockTime
+                )
+            {
+                this.Address = address;
+                this.Amount = amount;
+                this.Confirmations = confirmations;
+                this.DoubleSpendSeen = doubleSpendSeen;
+                this.Fee = fee;
+                this.Height = height;
+                this.Note = note;
+                this.PaymentId = paymentId;
+                this.SubaddressIndex = subaddressIndex;
+                this.SuggestedConfirmationsThreshold = suggestedConfirmationsThreshold;
+                this.Timestamp = timestamp;
+                this.TransactionId = transactionId;
+                this.TransferType = transferType;
+                this.UnlockTime = unlockTime;
+            }
+
+            [JsonPropertyName("address")]
+            public string Address { get; set; }
+            [JsonPropertyName("amount")]
+            public ulong Amount { get; set; }
+            [JsonPropertyName("confirmations")]
+            public ulong Confirmations { get; set; }
+            [JsonPropertyName("double_spend_seen")]
+            public bool DoubleSpendSeen { get; set; }
+            [JsonPropertyName("fee")]
+            public ulong Fee { get; set; }
+            [JsonPropertyName("height")]
+            public ulong Height { get; set; }
+            [JsonPropertyName("note")]
+            public string Note { get; set; }
+            [JsonPropertyName("payment_id")]
+            public string PaymentId { get; set; }
+            [JsonPropertyName("subaddr_index")]
+            public PaymentSubaddressIndexRpcResult SubaddressIndex { get; set; }
+            [JsonPropertyName("suggested_confirmations_threshold")]
+            public ulong SuggestedConfirmationsThreshold { get; set; }
+            [JsonPropertyName("timestamp")]
+            public ulong Timestamp { get; set; }
+            [JsonPropertyName("txid")]
+            public string TransactionId { get; set; }
+            [JsonPropertyName("type")]
+            public string TransferType { get; set; }
+            [JsonPropertyName("unlock_time")]
+            public ulong UnlockTime { get; set; }
         }
     }
 }
