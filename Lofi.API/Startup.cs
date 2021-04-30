@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Lofi.API.Database;
 using Lofi.API.Services;
@@ -49,6 +50,22 @@ namespace Lofi.API
                 services.AddDatabaseDeveloperPageExceptionFilter();
             }
 
+            services.AddHttpClient();
+            services.AddScoped<MoneroService>(provider =>
+            {
+                var deamonRpcUri = Configuration.GetValue<string>("MONEROD_RPC_URI", "http://monerod:28081/json_rpc");
+                var walletRpcUri = Configuration.GetValue<string>("MONERO_WALLET_RPC_URI", "http://monero-wallet-rpc:28083/json_rpc");
+                var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
+                return new MoneroService(httpClientFactory, deamonRpcUri, walletRpcUri);
+            });
+            services.AddScoped<TipService>(provider =>
+            {
+                var lofiContext = provider.GetRequiredService<LofiContext>();
+                var moneroService = provider.GetRequiredService<MoneroService>();
+                var deamonRpcUri = Configuration.GetValue<string>("LOFI_WALLET_FILE", "testwallet");
+                var walletRpcUri = Configuration.GetValue<string>("LOFI_WALLET_PASSWORD", string.Empty);
+                return new TipService(lofiContext, moneroService, deamonRpcUri, walletRpcUri);
+            });
             services.AddScoped<AlbumService>();
             services.AddScoped<GenreService>();
             services.AddScoped<TrackService>();

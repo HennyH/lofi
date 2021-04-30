@@ -4,6 +4,8 @@ VOLUME [ "/home/app/src/" ]
 ENV ASPNETCORE_URLS=http://+:8010 \
     DOTNET_RUNNING_IN_CONTAINER=true
 
+RUN apt-get update && apt-get install -y libgdiplus
+
 RUN groupadd \
         --system \
         # exit successfully if the group already exists

@@ -3,6 +3,7 @@ WORKDIR /app
 EXPOSE 8010
 
 ENV ASPNETCORE_URLS=http://+:8010
+RUN apt-get update && apt-get install -y libgdiplus
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-dotnet-configure-containers
