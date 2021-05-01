@@ -52,6 +52,7 @@ namespace Lofi.API
 
             services.AddHttpClient();
             services.AddScoped<MoneroService>();
+            services.AddScoped<ArtistService>();
             services.AddScoped<TipService>();
             services.AddScoped<AlbumService>();
             services.AddScoped<GenreService>();

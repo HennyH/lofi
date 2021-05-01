@@ -3,15 +3,17 @@ using System;
 using Lofi.API.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Lofi.API.Migrations
 {
     [DbContext(typeof(LofiContext))]
-    partial class LofiContextModelSnapshot : ModelSnapshot
+    [Migration("20210502051114_InitialMigration")]
+    partial class InitialMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -369,10 +371,6 @@ namespace Lofi.API.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("artist_id");
 
-                    b.Property<decimal>("BlockHeight")
-                        .HasColumnType("numeric(20,0)")
-                        .HasColumnName("block_height");
-
                     b.Property<DateTime?>("CreatedDate")
                         .IsRequired()
                         .HasColumnType("timestamp without time zone")
@@ -399,19 +397,10 @@ namespace Lofi.API.Migrations
                         .HasColumnType("numeric(20,0)")
                         .HasColumnName("payout_tx_fee_share");
 
-                    b.Property<decimal>("Timestamp")
-                        .HasColumnType("numeric(20,0)")
-                        .HasColumnName("timestamp");
-
                     b.Property<int?>("TipId")
                         .IsRequired()
                         .HasColumnType("integer")
                         .HasColumnName("tip_id");
-
-                    b.Property<string>("TransactionId")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("transaction_id");
 
                     b.Property<string>("WalletAddress")
                         .HasColumnType("text")
@@ -643,10 +632,10 @@ namespace Lofi.API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lofi.API.Database.Entities.TipPayout", "Payout")
+                    b.HasOne("Lofi.API.Database.Entities.TipPayment", "Payout")
                         .WithMany()
                         .HasForeignKey("PayoutId")
-                        .HasConstraintName("fk_artist_tip_payouts_tip_payouts_payout_id")
+                        .HasConstraintName("fk_artist_tip_payouts_tip_payments_payout_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

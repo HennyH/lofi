@@ -26,9 +26,10 @@ namespace Lofi.API.Controllers
         }
 
         [HttpPost]
-        public async Task CreateAlbum([FromForm] UpsertAlbumRequest upsertAlbumRequest, CancellationToken cancellationToken)
+        public async Task<int> CreateAlbum([FromForm] UpsertAlbumRequest upsertAlbumRequest, CancellationToken cancellationToken)
         {
-            await _albumService.UpsertAlbum(albumId: null, upsertAlbumRequest, now: DateTime.Now, cancellationToken: cancellationToken);
+            var album = await _albumService.UpsertAlbum(albumId: null, upsertAlbumRequest, now: DateTime.Now, cancellationToken: cancellationToken);
+            return album.Id;
         }
 
         [HttpPost]

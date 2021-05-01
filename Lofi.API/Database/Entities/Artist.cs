@@ -1,5 +1,6 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Http;
 
 namespace Lofi.API.Database.Entities
 {
@@ -12,5 +13,11 @@ namespace Lofi.API.Database.Entities
         [Required]
         public string? WalletAddress { get; set; }
         public UploadedFile? ProfilePicture { get; set; }
+        [Required]
+        public DateTime? CreatedDate { get; set; }
+        public DateTime? ModifiedDate { get; set; }
+        public ICollection<Album> Albums { get; set; } = new List<Album>();
+        public ICollection<Track> Tracks { get; set; } = new List<Track>();
+        public ICollection<Tip> Tips { get; set; } = new List<Tip>();
     }
 }

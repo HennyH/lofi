@@ -26,6 +26,7 @@ namespace Lofi.API
                 .ConfigureServices(services =>
                 {
                     services.AddHostedService<TipPaymentConfirmationService>();
+                    services.AddHostedService<TipPayoutService>();
                 });
     }
 }
