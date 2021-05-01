@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Lofi.API.Database;
+using Lofi.API.Database.Entities;
 using Lofi.API.Models.MoneroRpc.Parameters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -44,8 +45,8 @@ namespace Lofi.API.Services
             var moneroService = scope.ServiceProvider.GetRequiredService<MoneroService>();
 
             ulong currentBlockHeight = await lofiContext.Tips
-                .Where(t => t.BlockHeight.HasValue)
-                .Select(t => (ulong?)t.BlockHeight!.Value)
+                .Where(t => t.Payment != null && t.Payment.BlockHeight.HasValue)
+                .Select(t => (ulong?)t.Payment!.BlockHeight!.Value)
                 .OrderByDescending(h => h)
                 .FirstOrDefaultAsync(cancellationToken)
                 ?? 1;
@@ -87,10 +88,18 @@ namespace Lofi.API.Services
                 foreach (var tip in tips)
                 {
                     var transfer = paymentIdToTransfer[tip.PaymentId!.Value];
-                    tip.BlockHeight = transfer.Height;
-                    tip.TransactionId = transfer.TransactionId;
-                    tip.Amount = transfer.Amount;
-                    _logger.LogInformation($"Matched tip id {tip.Id} with payment id {tip.PaymentId} ({tip.Amount} units) to transfer with txid {tip.TransactionId} at height {transfer.Height}");
+                    var now = DateTime.Now;
+                    tip.Payment = new TipPayment
+                    {
+                        BlockHeight = transfer.Height,
+                        Amount = transfer.Amount,
+                        TransactionId = transfer.TransactionId,
+                        Timestamp = transfer.Timestamp,
+                        Tip = tip,
+                        CreatedDate = now,
+                        ModifiedDate = now,
+                    };
+                    _logger.LogInformation($"Matched tip id {tip.Id} with payment id {tip.PaymentId} ({tip.Payment.Amount} units) to transfer with txid {tip.Payment.TransactionId} at height {transfer.Height}");
                 }
 
                 currentBlockHeight = transfers.Result.InTransfers.Max(t => t.Height);

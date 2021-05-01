@@ -18,12 +18,12 @@ namespace Lofi.API.Database.Entities
         [Required]
         public int? ArtistId { get; set; }
         public string? WalletAddress { get; set; }
-        [Required]
-        public string? TransactionHash { get; set; }
-        [Required]
-        public string? TransactionKey { get; set; }
-        [Required]
-        public string? TransactionMetadata { get; set; }
+        // [Required]
+        // public string? TransactionHash { get; set; }
+        // [Required]
+        // public string? TransactionKey { get; set; }
+        // [Required]
+        // public string? TransactionMetadata { get; set; }
         [Required]
         public ulong? TipAmount { get; set; }
         [Required]
@@ -34,8 +34,6 @@ namespace Lofi.API.Database.Entities
         public ulong? PayoutTxFee { get; set; }
         [Required]
         public ulong? PayoutTxFeeShare { get; set; }
-        [Required]
-        public bool? HasBeenPayedOut { get; set; }
         [Required]
         public DateTime? CreatedDate { get; set; }
         [Required]

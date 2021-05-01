@@ -14,5 +14,7 @@ namespace Lofi.API.Database
         public virtual DbSet<Album> Albums { get; set; } = null!;
         public virtual DbSet<Track> Tracks { get; set; } = null!;
         public virtual DbSet<Tip> Tips { get; set; } = null!;
+        public virtual DbSet<TipPayout> TipPayouts { get; set; } = null!;
+        public virtual DbSet<TipPayment> TipPayments { get; set; } = null!;
     }
 }

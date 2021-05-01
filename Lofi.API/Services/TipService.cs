@@ -35,20 +35,20 @@ namespace Lofi.API.Services
         public async Task<ushort?> GetAvailablePaymentId(CancellationToken cancellationToken = default)
         {
             var availablePaymentId = await _lofiContext.Tips
-                .Where(t => t.BlockHeight.HasValue)
+                .Where(t => t.Payment != null && t.Payment.BlockHeight.HasValue)
                 .Select(t => t.PaymentId)
                 .FirstOrDefaultAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (availablePaymentId != default) return availablePaymentId.Value;
 
-            var highestPaymentIdInUser = await _lofiContext.Tips
-                .Where(t => !t.BlockHeight.HasValue)
+            var highestPaymentIdInUse = await _lofiContext.Tips
+                .Where(t => t.Payment != null && t.Payment.BlockHeight.HasValue)
                 .Select(t => t.PaymentId)
                 .OrderByDescending(id => id)
                 .FirstOrDefaultAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            if (highestPaymentIdInUser == null) return UInt16.MinValue + 1;
-            if (highestPaymentIdInUser.Value < UInt16.MaxValue) return (ushort)(highestPaymentIdInUser.Value + 1);
+            if (highestPaymentIdInUse == null) return UInt16.MinValue + 1;
+            if (highestPaymentIdInUse.Value < UInt16.MaxValue) return (ushort)(highestPaymentIdInUse.Value + 1);
 
             return null;
         }
@@ -78,6 +78,9 @@ namespace Lofi.API.Services
             tip.PaymentId = paymentId;
             tip.PaymentIdHex = integratedAddressResponse.Result.PaymentId;
             tip.IntegratedPaymentAddress = integratedAddressResponse.Result.IntegratedAddress;
+            tip.CreatedDate = tip.CreatedDate ?? now;
+            tip.ModifiedDate = now;
+
             _lofiContext.Tips.Add(tip);
             await _lofiContext.SaveChangesAsync();
             return tip;

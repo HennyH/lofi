@@ -355,23 +355,23 @@ namespace Lofi.API.Models.MoneroRpc.Results
         }
 
         [JsonPropertyName("tx_hash")]
-        public string TransactionHash {get;set;}
+        public string TransactionHash { get; set; }
         [JsonPropertyName("tx_key")]
-        public string TransactionKey {get;set;}
+        public string TransactionKey { get; set; }
         [JsonPropertyName("amount")]
-        public ulong Amount {get;set;}
+        public ulong Amount { get; set; }
         [JsonPropertyName("fee")]
-        public ulong Fee {get;set;}
+        public ulong Fee { get; set; }
         [JsonPropertyName("weight")]
-        public ulong Weight {get;set;}
+        public ulong Weight { get; set; }
         [JsonPropertyName("tx_blob")]
-        public string TransactionBlob {get;set;}
+        public string TransactionBlob { get; set; }
         [JsonPropertyName("tx_metadata")]
-        public string TransactionMetadata {get;set;}
+        public string TransactionMetadata { get; set; }
         [JsonPropertyName("multisig_txset")]
-        public string MultiSignatureTransactionSet {get;set;}
+        public string MultiSignatureTransactionSet { get; set; }
         [JsonPropertyName("unsigned_txset")]
-        public string UnsignedTransactionSet {get;set;}
+        public string UnsignedTransactionSet { get; set; }
     }
 
     public class SplitTransferRpcResult
@@ -400,23 +400,97 @@ namespace Lofi.API.Models.MoneroRpc.Results
         }
 
         [JsonPropertyName("tx_hash_list")]
-        public IEnumerable<string> TransactionHashes {get;set;}
+        public IEnumerable<string> TransactionHashes { get; set; }
         [JsonPropertyName("tx_key_list")]
-        public IEnumerable<string> TransactionKeys {get;set;}
+        public IEnumerable<string> TransactionKeys { get; set; }
         [JsonPropertyName("amount_list")]
-        public IEnumerable<ulong> Amounts {get;set;}
+        public IEnumerable<ulong> Amounts { get; set; }
         [JsonPropertyName("fee_list")]
-        public IEnumerable<ulong> Fees {get;set;}
+        public IEnumerable<ulong> Fees { get; set; }
         [JsonPropertyName("weight_list")]
-        public IEnumerable<ulong> Weights {get;set;}
+        public IEnumerable<ulong> Weights { get; set; }
         [JsonPropertyName("tx_blob_list")]
-        public IEnumerable<string> TransactionBlobs {get;set;}
+        public IEnumerable<string> TransactionBlobs { get; set; }
         [JsonPropertyName("tx_metadata_list")]
-        public IEnumerable<string> TransactionMetadatas {get;set;}
+        public IEnumerable<string> TransactionMetadatas { get; set; }
         [JsonPropertyName("multisig_txset")]
-        public string MultiSignatureTransactionSet {get;set;}
+        public string MultiSignatureTransactionSet { get; set; }
         [JsonPropertyName("unsigned_txset")]
-        public string UnsignedTransactionSet {get;set;}
+        public string UnsignedTransactionSet { get; set; }
+    }
+
+    public class DescribeTransferRpcResult
+    {
+        public DescribeTransferRpcResult(IEnumerable<TransferDescription> transferDescriptions)
+        {
+            this.TransferDescriptions = transferDescriptions;
+        }
+
+        [JsonPropertyName("desc")]
+        public IEnumerable<TransferDescription> TransferDescriptions { get; set; }
+
+        public class TransferDescription
+        {
+            public TransferDescription(
+                    ulong amountIn,
+                    ulong amountOut,
+                    IEnumerable<Recipient> recipients,
+                    string changeAddress,
+                    ulong changeAmount,
+                    ulong fee,
+                    string paymentId,
+                    ulong unlockTime,
+                    ulong dummyOutputs,
+                    string extra
+                )
+            {
+                this.AmountIn = amountIn;
+                this.AmountOut = amountOut;
+                this.Recipients = recipients;
+                this.ChangeAddress = changeAddress;
+                this.ChangeAmount = changeAmount;
+                this.Fee = fee;
+                this.PaymentId = paymentId;
+                this.UnlockTime = unlockTime;
+                this.DummyOutputs = dummyOutputs;
+                this.Extra = extra;
+            }
+
+            [JsonPropertyName("amount_in")]
+            public ulong AmountIn { get; set; }
+            [JsonPropertyName("amount_out")]
+            public ulong AmountOut { get; set; }
+            [JsonPropertyName("recipients")]
+            public IEnumerable<Recipient> Recipients { get; set; }
+            [JsonPropertyName("change_address")]
+            public string ChangeAddress { get; set; }
+            [JsonPropertyName("change_amount")]
+            public ulong ChangeAmount { get; set; }
+            [JsonPropertyName("fee")]
+            public ulong Fee { get; set; }
+            [JsonPropertyName("payment_id")]
+            public string PaymentId { get; set; }
+            [JsonPropertyName("unlock_time")]
+            public ulong UnlockTime { get; set; }
+            [JsonPropertyName("dummy_outputs")]
+            public ulong DummyOutputs { get; set; }
+            [JsonPropertyName("extra")]
+            public string Extra { get; set; }
+        }
+
+        public class Recipient
+        {
+            public Recipient(string address, ulong amount)
+            {
+                this.Address = address;
+                this.Amount = amount;
+            }
+
+            [JsonPropertyName("address")]
+            public string Address { get; set; }
+            [JsonPropertyName("amount")]
+            public ulong Amount { get; set; }
+        }
     }
 
     public class SubmitTransferRpcResult
@@ -427,6 +501,6 @@ namespace Lofi.API.Models.MoneroRpc.Results
         }
 
         [JsonPropertyName("tx_hash_list")]
-        public IEnumerable<string> TransactionHashList {get;set;}
+        public IEnumerable<string> TransactionHashList { get; set; }
     }
 }

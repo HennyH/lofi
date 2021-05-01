@@ -24,6 +24,7 @@ namespace Lofi.API.Services
         public const string GET_BALANCE = "get_balance";
         public const string TRANSFER = "transfer";
         public const string SPLIT_TRANSFER = "split_transfer";
+        public const string DESCRIBE_TRANSFER = "describe_transfer";
         public const string SUBMIT_TRANSFER = "submit_transfer";
     }
 
@@ -161,6 +162,15 @@ namespace Lofi.API.Services
         {
             return await PerformWalletRpc<RpcParameters.SplitTransferRpcParameters, RpcResults.SplitTransferRpcResult>(
                 MoneroWalletRpcMethod.SPLIT_TRANSFER,
+                parameters,
+                cancellationToken: cancellationToken
+            );
+        }
+        
+        public async Task<MoneroRpcResponse<RpcResults.DescribeTransferRpcResult>> DescribeTransfer(RpcParameters.DescribeTransferRpcParameters parameters, CancellationToken cancellationToken = default)
+        {
+            return await PerformWalletRpc<RpcParameters.DescribeTransferRpcParameters, RpcResults.DescribeTransferRpcResult>(
+                MoneroWalletRpcMethod.DESCRIBE_TRANSFER,
                 parameters,
                 cancellationToken: cancellationToken
             );
