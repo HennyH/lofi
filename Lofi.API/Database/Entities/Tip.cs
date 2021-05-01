@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Lofi.API.Database.Entities
@@ -16,12 +17,14 @@ namespace Lofi.API.Database.Entities
         public Track? Track { get; set; }
         [Required]
         public int? TrackId { get; set; }
+        public ICollection<Artist> Artists { get; set; } = new List<Artist>();
         [Required]
         public string? IntegratedPaymentAddress { get; set; }
-        public string? TransactionId { get; set; }
+        public TipPayment? Payment { get; set; }
+        public ICollection<TipPayout> Payouts { get; set; } = new List<TipPayout>();
         [Required]
         public DateTime? CreatedDate { get; set; }
-        public ulong? BlockHeight { get; set; }
-        public DateTime? PayedOutDate { get; set; }
+        [Required]
+        public DateTime? ModifiedDate { get; set; }
     }
 }

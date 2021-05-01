@@ -120,18 +120,18 @@ namespace Lofi.API.Models.MoneroRpc.Results
     }
 
     public class PaymentSubaddressIndexRpcResult
+    {
+        public PaymentSubaddressIndexRpcResult(ulong major, ulong minor)
         {
-            public PaymentSubaddressIndexRpcResult(ulong major, ulong minor)
-            {
-                this.Major = major;
-                this.Minor = minor;
-            }
-
-            [JsonPropertyName("major")]
-            public ulong Major { get; set; }
-            [JsonPropertyName("minor")]
-            public ulong Minor { get; set; }
+            this.Major = major;
+            this.Minor = minor;
         }
+
+        [JsonPropertyName("major")]
+        public ulong Major { get; set; }
+        [JsonPropertyName("minor")]
+        public ulong Minor { get; set; }
+    }
 
     public class GetPaymentsRpcResult
     {
@@ -189,7 +189,7 @@ namespace Lofi.API.Models.MoneroRpc.Results
         {
             this.InTransfers = inTransfers;
             this.OutTransfers = outTransfers;
-            this.PendingTransfers =pendingTransfers;
+            this.PendingTransfers = pendingTransfers;
             this.FailedTransfers = failedTransfers;
             this.PoolTransfers = poolTransfers;
         }
@@ -269,5 +269,164 @@ namespace Lofi.API.Models.MoneroRpc.Results
             [JsonPropertyName("unlock_time")]
             public ulong UnlockTime { get; set; }
         }
+    }
+
+    public class GetBalanceRpcResult
+    {
+        public GetBalanceRpcResult(
+                ulong balance,
+                ulong unlockedBalance,
+                bool multiSignatureImportNeeded,
+                IEnumerable<SubaddressBalance> subaddressBalances
+            )
+        {
+            this.Balance = balance;
+            this.UnlockedBalance = unlockedBalance;
+            this.MultiSignatureImportNeeded = multiSignatureImportNeeded;
+            this.SubaddressBalances = subaddressBalances;
+        }
+
+        [JsonPropertyName("balance")]
+        public ulong Balance { get; set; }
+        [JsonPropertyName("unlocked_balance")]
+        public ulong UnlockedBalance { get; set; }
+        [JsonPropertyName("multisig_import_needed")]
+        public bool MultiSignatureImportNeeded { get; set; }
+        [JsonPropertyName("per_subaddress")]
+        public IEnumerable<SubaddressBalance> SubaddressBalances { get; set; }
+
+        public class SubaddressBalance
+        {
+            public SubaddressBalance(
+                    ulong addressIndex,
+                    string address,
+                    ulong balance,
+                    ulong unlockedBalance,
+                    string label,
+                    ulong numberOfUnspentOutputs
+                )
+            {
+                this.AddressIndex = addressIndex;
+                this.Address = address;
+                this.Balance = balance;
+                this.UnlockedBalance = unlockedBalance;
+                this.Label = label;
+                this.NumberOfUnspentOutputs = numberOfUnspentOutputs;
+            }
+
+            [JsonPropertyName("address_index")]
+            public ulong AddressIndex { get; set; }
+            [JsonPropertyName("address")]
+            public string Address { get; set; }
+            [JsonPropertyName("balance")]
+            public ulong Balance { get; set; }
+            [JsonPropertyName("unlocked_balance")]
+            public ulong UnlockedBalance { get; set; }
+            [JsonPropertyName("label")]
+            public string Label { get; set; }
+            [JsonPropertyName("num_unspent_outputs")]
+            public ulong NumberOfUnspentOutputs { get; set; }
+        }
+    }
+
+    public class TransferRpcResult
+    {
+        public TransferRpcResult(
+                string transactionHash,
+                string transactionKey,
+                ulong amount,
+                ulong fee,
+                ulong weight,
+                string transactionBlob,
+                string transactionMetadata,
+                string multiSignatureTransactionSet,
+                string unsignedTransactionSet
+            )
+        {
+            this.TransactionHash = transactionHash;
+            this.TransactionKey = transactionKey;
+            this.Amount = amount;
+            this.Fee = fee;
+            this.Weight = weight;
+            this.TransactionBlob = transactionBlob;
+            this.TransactionMetadata = transactionMetadata;
+            this.MultiSignatureTransactionSet = multiSignatureTransactionSet;
+            this.UnsignedTransactionSet = unsignedTransactionSet;
+        }
+
+        [JsonPropertyName("tx_hash")]
+        public string TransactionHash {get;set;}
+        [JsonPropertyName("tx_key")]
+        public string TransactionKey {get;set;}
+        [JsonPropertyName("amount")]
+        public ulong Amount {get;set;}
+        [JsonPropertyName("fee")]
+        public ulong Fee {get;set;}
+        [JsonPropertyName("weight")]
+        public ulong Weight {get;set;}
+        [JsonPropertyName("tx_blob")]
+        public string TransactionBlob {get;set;}
+        [JsonPropertyName("tx_metadata")]
+        public string TransactionMetadata {get;set;}
+        [JsonPropertyName("multisig_txset")]
+        public string MultiSignatureTransactionSet {get;set;}
+        [JsonPropertyName("unsigned_txset")]
+        public string UnsignedTransactionSet {get;set;}
+    }
+
+    public class SplitTransferRpcResult
+    {
+        public SplitTransferRpcResult(
+                IEnumerable<string> transactionHashes,
+                IEnumerable<string> transactionKeys,
+                IEnumerable<ulong> amounts,
+                IEnumerable<ulong> weights,
+                IEnumerable<ulong> fees,
+                IEnumerable<string> transactionBlobs,
+                IEnumerable<string> transactionMetadatas,
+                string multiSignatureTransactionSet,
+                string unsignedTransactionSet
+            )
+        {
+            this.TransactionHashes = transactionHashes;
+            this.TransactionKeys = transactionKeys;
+            this.Amounts = amounts;
+            this.Weights = weights;
+            this.Fees = fees;
+            this.TransactionBlobs = transactionBlobs;
+            this.TransactionMetadatas = transactionMetadatas;
+            this.MultiSignatureTransactionSet = multiSignatureTransactionSet;
+            this.UnsignedTransactionSet = unsignedTransactionSet;
+        }
+
+        [JsonPropertyName("tx_hash_list")]
+        public IEnumerable<string> TransactionHashes {get;set;}
+        [JsonPropertyName("tx_key_list")]
+        public IEnumerable<string> TransactionKeys {get;set;}
+        [JsonPropertyName("amount_list")]
+        public IEnumerable<ulong> Amounts {get;set;}
+        [JsonPropertyName("fee_list")]
+        public IEnumerable<ulong> Fees {get;set;}
+        [JsonPropertyName("weight_list")]
+        public IEnumerable<ulong> Weights {get;set;}
+        [JsonPropertyName("tx_blob_list")]
+        public IEnumerable<string> TransactionBlobs {get;set;}
+        [JsonPropertyName("tx_metadata_list")]
+        public IEnumerable<string> TransactionMetadatas {get;set;}
+        [JsonPropertyName("multisig_txset")]
+        public string MultiSignatureTransactionSet {get;set;}
+        [JsonPropertyName("unsigned_txset")]
+        public string UnsignedTransactionSet {get;set;}
+    }
+
+    public class SubmitTransferRpcResult
+    {
+        public SubmitTransferRpcResult(IEnumerable<string> tansactionHashList)
+        {
+            this.TransactionHashList = tansactionHashList;
+        }
+
+        [JsonPropertyName("tx_hash_list")]
+        public IEnumerable<string> TransactionHashList {get;set;}
     }
 }

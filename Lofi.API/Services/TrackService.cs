@@ -33,10 +33,10 @@ namespace Lofi.API.Services
             track.Description = upsertTrackRequest.Description ?? track.Description;
             track.CoverPhotoFile = upsertTrackRequest.CoverPhotoFile == null
                 ? track.CoverPhotoFile
-                : await UploadedFile.FromFormFile(upsertTrackRequest.CoverPhotoFile);
+                : await UploadedFile.FromFormFileAsync(upsertTrackRequest.CoverPhotoFile);
             track.AudioFile = upsertTrackRequest.AudioFile == null
                 ? track.AudioFile
-                : await UploadedFile.FromFormFile(upsertTrackRequest.AudioFile);
+                : await UploadedFile.FromFormFileAsync(upsertTrackRequest.AudioFile);
             
             if (upsertTrackRequest.GenreIds != null)
             {

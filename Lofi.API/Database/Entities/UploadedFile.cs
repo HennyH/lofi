@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Threading;
 using System.Threading.Tasks;
 using Lofi.API.Shared;
 using Microsoft.AspNetCore.Http;
@@ -24,10 +25,12 @@ namespace Lofi.API.Database.Entities
         [Required]
         public bool Deleted { get; set; } = false;       
 
-        public static async Task<UploadedFile> FromFormFile(IFormFile formFile)
+        public static async Task<UploadedFile> FromFormFileAsync(IFormFile formFile, CancellationToken cancellationToken = default)
         {
-            var bytes = await formFile.ToArrayAsync();
-            var hash = await HashUtils.Sha1HexDigestAsync(bytes);
+            var bytes = await formFile.ToArrayAsync(cancellationToken: cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            var hash = await HashUtils.Sha1HexDigestAsync(bytes, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             return new UploadedFile
             {
                 UniqueId = Guid.NewGuid(),

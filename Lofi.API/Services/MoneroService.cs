@@ -21,6 +21,10 @@ namespace Lofi.API.Services
         public const string GET_ADDRESS = "get_address";
         public const string GET_PAYMENTS = "get_payments";
         public const string GET_TRANSFERS = "get_transfers";
+        public const string GET_BALANCE = "get_balance";
+        public const string TRANSFER = "transfer";
+        public const string SPLIT_TRANSFER = "split_transfer";
+        public const string SUBMIT_TRANSFER = "submit_transfer";
     }
 
     public class MoneroService
@@ -130,6 +134,42 @@ namespace Lofi.API.Services
         {
             return await PerformWalletRpc<RpcParameters.GetTransfersRpcParameters, RpcResults.GetTransfersRpcResult>(
                 MoneroWalletRpcMethod.GET_TRANSFERS,
+                parameters,
+                cancellationToken: cancellationToken
+            );
+        }
+
+        public async Task<MoneroRpcResponse<RpcResults.GetBalanceRpcResult>> GetBalance(RpcParameters.GetBalanceRpcParameters parameters, CancellationToken cancellationToken = default)
+        {
+            return await PerformWalletRpc<RpcParameters.GetBalanceRpcParameters, RpcResults.GetBalanceRpcResult>(
+                MoneroWalletRpcMethod.GET_BALANCE,
+                parameters,
+                cancellationToken: cancellationToken
+            );
+        }
+
+        public async Task<MoneroRpcResponse<RpcResults.TransferRpcResult>> Transfer(RpcParameters.TransferRpcParameters parameters, CancellationToken cancellationToken = default)
+        {
+            return await PerformWalletRpc<RpcParameters.TransferRpcParameters, RpcResults.TransferRpcResult>(
+                MoneroWalletRpcMethod.TRANSFER,
+                parameters,
+                cancellationToken: cancellationToken
+            );
+        }
+
+        public async Task<MoneroRpcResponse<RpcResults.SplitTransferRpcResult>> SplitTransfer(RpcParameters.SplitTransferRpcParameters parameters, CancellationToken cancellationToken = default)
+        {
+            return await PerformWalletRpc<RpcParameters.SplitTransferRpcParameters, RpcResults.SplitTransferRpcResult>(
+                MoneroWalletRpcMethod.SPLIT_TRANSFER,
+                parameters,
+                cancellationToken: cancellationToken
+            );
+        }
+
+        public async Task<MoneroRpcResponse<RpcResults.SubmitTransferRpcResult>> SubmitTransfer(RpcParameters.SubmitTransferRpcParameters parameters, CancellationToken cancellationToken = default)
+        {
+            return await PerformWalletRpc<RpcParameters.SubmitTransferRpcParameters, RpcResults.SubmitTransferRpcResult>(
+                MoneroWalletRpcMethod.SUBMIT_TRANSFER,
                 parameters,
                 cancellationToken: cancellationToken
             );

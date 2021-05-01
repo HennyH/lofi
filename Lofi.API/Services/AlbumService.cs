@@ -33,7 +33,7 @@ namespace Lofi.API.Services
             album.Description = upsertAlbumRequest.Description ?? album.Description;
             album.CoverPhotoFile = upsertAlbumRequest.CoverPhotoFile == null
                 ? album.CoverPhotoFile
-                : await UploadedFile.FromFormFile(upsertAlbumRequest.CoverPhotoFile);
+                : await UploadedFile.FromFormFileAsync(upsertAlbumRequest.CoverPhotoFile);
             album.ReleaseDate = upsertAlbumRequest.ReleaseDate ?? album.ReleaseDate;
             album.CreatedDate = album.CreatedDate ?? now;
             album.ModifiedDate = now;

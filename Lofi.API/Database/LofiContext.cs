@@ -8,7 +8,7 @@ namespace Lofi.API.Database
         public LofiContext(DbContextOptions<LofiContext> options) : base(options)
         { }
 
-        public virtual DbSet<UploadedFile> Files { get; set; } = null!;
+        public virtual DbSet<UploadedFile> UploadedFiles { get; set; } = null!;
         public virtual DbSet<Genre> Genres { get; set; } = null!;
         public virtual DbSet<Artist> Artists { get; set; } = null!;
         public virtual DbSet<Album> Albums { get; set; } = null!;

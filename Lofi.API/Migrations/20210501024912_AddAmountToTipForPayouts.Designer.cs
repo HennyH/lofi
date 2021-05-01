@@ -3,81 +3,23 @@ using System;
 using Lofi.API.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Lofi.API.Migrations
 {
     [DbContext(typeof(LofiContext))]
-    partial class LofiContextModelSnapshot : ModelSnapshot
+    [Migration("20210501024912_AddAmountToTipForPayouts")]
+    partial class AddAmountToTipForPayouts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Relational:MaxIdentifierLength", 63)
                 .HasAnnotation("ProductVersion", "5.0.5")
                 .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
-
-            modelBuilder.Entity("AlbumArtist", b =>
-                {
-                    b.Property<int>("AlbumsId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("ArtistsId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("AlbumsId", "ArtistsId");
-
-                    b.HasIndex("ArtistsId");
-
-                    b.ToTable("AlbumArtist");
-                });
-
-            modelBuilder.Entity("AlbumGenre", b =>
-                {
-                    b.Property<int>("AlbumsId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("GenresId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("AlbumsId", "GenresId");
-
-                    b.HasIndex("GenresId");
-
-                    b.ToTable("AlbumGenre");
-                });
-
-            modelBuilder.Entity("ArtistTrack", b =>
-                {
-                    b.Property<int>("ArtistsId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TracksId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("ArtistsId", "TracksId");
-
-                    b.HasIndex("TracksId");
-
-                    b.ToTable("ArtistTrack");
-                });
-
-            modelBuilder.Entity("GenreTrack", b =>
-                {
-                    b.Property<int>("GenresId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TracksId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("GenresId", "TracksId");
-
-                    b.HasIndex("TracksId");
-
-                    b.ToTable("GenreTrack");
-                });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Album", b =>
                 {
@@ -124,12 +66,8 @@ namespace Lofi.API.Migrations
                         .HasColumnType("integer")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
-                    b.Property<DateTime?>("CreatedDate")
-                        .IsRequired()
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("ModifiedDate")
-                        .HasColumnType("timestamp without time zone");
+                    b.Property<int?>("AlbumId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -138,13 +76,20 @@ namespace Lofi.API.Migrations
                     b.Property<int?>("ProfilePictureId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("TrackId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("WalletAddress")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AlbumId");
+
                     b.HasIndex("ProfilePictureId");
+
+                    b.HasIndex("TrackId");
 
                     b.ToTable("Artists");
                 });
@@ -156,6 +101,9 @@ namespace Lofi.API.Migrations
                         .HasColumnType("integer")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
+                    b.Property<int?>("AlbumId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Desription")
                         .HasColumnType("text");
 
@@ -166,9 +114,16 @@ namespace Lofi.API.Migrations
                     b.Property<int?>("ParentGenreId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("TrackId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("AlbumId");
+
                     b.HasIndex("ParentGenreId");
+
+                    b.HasIndex("TrackId");
 
                     b.ToTable("Genres");
                 });
@@ -203,9 +158,6 @@ namespace Lofi.API.Migrations
                     b.Property<string>("PaymentIdHex")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<decimal?>("PayoutAmount")
-                        .HasColumnType("numeric(20,0)");
 
                     b.Property<DateTime?>("PayoutDate")
                         .HasColumnType("timestamp without time zone");
@@ -301,67 +253,7 @@ namespace Lofi.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("UploadedFiles");
-                });
-
-            modelBuilder.Entity("AlbumArtist", b =>
-                {
-                    b.HasOne("Lofi.API.Database.Entities.Album", null)
-                        .WithMany()
-                        .HasForeignKey("AlbumsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Lofi.API.Database.Entities.Artist", null)
-                        .WithMany()
-                        .HasForeignKey("ArtistsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("AlbumGenre", b =>
-                {
-                    b.HasOne("Lofi.API.Database.Entities.Album", null)
-                        .WithMany()
-                        .HasForeignKey("AlbumsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Lofi.API.Database.Entities.Genre", null)
-                        .WithMany()
-                        .HasForeignKey("GenresId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("ArtistTrack", b =>
-                {
-                    b.HasOne("Lofi.API.Database.Entities.Artist", null)
-                        .WithMany()
-                        .HasForeignKey("ArtistsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Lofi.API.Database.Entities.Track", null)
-                        .WithMany()
-                        .HasForeignKey("TracksId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("GenreTrack", b =>
-                {
-                    b.HasOne("Lofi.API.Database.Entities.Genre", null)
-                        .WithMany()
-                        .HasForeignKey("GenresId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Lofi.API.Database.Entities.Track", null)
-                        .WithMany()
-                        .HasForeignKey("TracksId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.ToTable("Files");
                 });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Album", b =>
@@ -377,18 +269,34 @@ namespace Lofi.API.Migrations
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Artist", b =>
                 {
+                    b.HasOne("Lofi.API.Database.Entities.Album", null)
+                        .WithMany("Artists")
+                        .HasForeignKey("AlbumId");
+
                     b.HasOne("Lofi.API.Database.Entities.UploadedFile", "ProfilePicture")
                         .WithMany()
                         .HasForeignKey("ProfilePictureId");
+
+                    b.HasOne("Lofi.API.Database.Entities.Track", null)
+                        .WithMany("Artists")
+                        .HasForeignKey("TrackId");
 
                     b.Navigation("ProfilePicture");
                 });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Genre", b =>
                 {
+                    b.HasOne("Lofi.API.Database.Entities.Album", null)
+                        .WithMany("Genres")
+                        .HasForeignKey("AlbumId");
+
                     b.HasOne("Lofi.API.Database.Entities.Genre", "ParentGenre")
                         .WithMany()
                         .HasForeignKey("ParentGenreId");
+
+                    b.HasOne("Lofi.API.Database.Entities.Track", null)
+                        .WithMany("Genres")
+                        .HasForeignKey("TrackId");
 
                     b.Navigation("ParentGenre");
                 });
@@ -429,7 +337,18 @@ namespace Lofi.API.Migrations
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Album", b =>
                 {
+                    b.Navigation("Artists");
+
+                    b.Navigation("Genres");
+
                     b.Navigation("Tracks");
+                });
+
+            modelBuilder.Entity("Lofi.API.Database.Entities.Track", b =>
+                {
+                    b.Navigation("Artists");
+
+                    b.Navigation("Genres");
                 });
 #pragma warning restore 612, 618
         }

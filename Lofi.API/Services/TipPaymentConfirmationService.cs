@@ -12,12 +12,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Lofi.API.Services
 {
-    public class TipPaymentConfirmationService : IHostedService, IDisposable
+    public class TipPaymentConfirmationService : IHostedService
     {
         private const string DEFAULT_LOFI_WALLET_FILE = "testwallet";
         private const string DEFAULT_LOFI_WALLET_PASSWORD = "";
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly Timer? _timer;
         private readonly ILogger<TipPaymentConfirmationService> _logger;
         private readonly string _lofiWalletFile;
         private readonly string _lofiWalletPassword;
@@ -90,7 +89,8 @@ namespace Lofi.API.Services
                     var transfer = paymentIdToTransfer[tip.PaymentId!.Value];
                     tip.BlockHeight = transfer.Height;
                     tip.TransactionId = transfer.TransactionId;
-                    _logger.LogInformation($"Matched tip id {tip.Id} with payment id {tip.PaymentId} to transfer with txid {tip.TransactionId} at height {transfer.Height}");
+                    tip.Amount = transfer.Amount;
+                    _logger.LogInformation($"Matched tip id {tip.Id} with payment id {tip.PaymentId} ({tip.Amount} units) to transfer with txid {tip.TransactionId} at height {transfer.Height}");
                 }
 
                 currentBlockHeight = transfers.Result.InTransfers.Max(t => t.Height);
@@ -105,11 +105,6 @@ namespace Lofi.API.Services
         {
             _logger.LogInformation("Tip Payment Confirmation service is shutting down");
             return Task.CompletedTask;
-        }
-
-        public void Dispose()
-        {
-            _timer?.Dispose();
         }
     }
 }
