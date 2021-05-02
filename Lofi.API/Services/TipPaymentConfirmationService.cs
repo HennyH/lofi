@@ -83,7 +83,7 @@ namespace Lofi.API.Services
                 if (!tips.Any())
                 {
                     continue;
-                }
+                } 
 
                 foreach (var tip in tips)
                 {

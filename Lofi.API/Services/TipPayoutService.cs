@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Lofi.API.Database;
 using Lofi.API.Database.Entities;
 using Lofi.API.Models.MoneroRpc.Parameters;
+using Lofi.API.Models.MoneroRpc.Results;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,7 +56,19 @@ namespace Lofi.API.Services
                     .Any(artist => !tip.Payouts
                         .Any(p => p.ArtistId == artist.Id)))
                 /* pay out the tips starting from the oldest */
-                .OrderBy(tip => tip.Id);
+                .OrderBy(tip => tip.Id)
+                .AsQueryable();
+            var x = lofiContext.Tips
+                /* we only pay out tips which have been payed by the tipper! */
+                .Where(tip =>
+                    tip.Payment != null &&
+                    tip.Payment.BlockHeight.HasValue &&
+                    tip.Payment.Amount.HasValue &&
+                    tip.Payment.Amount > 0)
+                .Include(tip => tip.Payment)
+                .Include(tip => tip.Artists)
+                .Include(tip => tip.Payouts)
+                .ToList(); 
             return await tipsWithMissingPayoutsInPayoutOrder
                 .Select(tip => new
                 {
@@ -91,22 +104,44 @@ namespace Lofi.API.Services
                     tip.Payment != null &&
                     tip.Payment.Amount.HasValue &&
                     tip.Payment.Amount > 0)
-                .Select(tip => tip.Id);
-            var artistTipPayouts = await lofiContext.Artists
-                .SelectMany(artist => artist.Tips
-                    .Select(tip => new
-                    {
-                        Artist = artist,
-                        Tip = tip,
-                        Payout = tip.Payouts
-                            .Where(payout => payout.ArtistId == artist.Id)
-                            .FirstOrDefault()
-                    }))
-                .Where(artistTipPayout => payedTipIds.Contains(artistTipPayout.Tip.Id))
+                .Select(tip => tip.Id)
+                .ToArray();
+            var tipsToPayOut = await lofiContext.Tips
+                .FromSqlInterpolated(
+                    $@"
+                        SELECT
+                            tip.*
+                        FROM tips AS tip
+                        INNER JOIN artist_tip AS artist_tip
+                            ON artist_tip.tips_id = tip.id
+                        LEFT OUTER JOIN tip_payouts AS payout
+                            ON payout.tip_id = tip.id AND payout.artist_id = artist_tip.artists_id
+                        WHERE
+                            EXISTS
+                            (
+                                SELECT
+                                    *
+                                FROM tip_payments AS payment
+                                WHERE payment.tip_id = tip.id
+                            )
+                            AND tip.id = ANY ({payedTipIds})
+                    "
+                )
+                .Include(x => x.Artists)
+                .Include(x => x.Payouts) 
                 .ToListAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+            var artistTipPayouts = tipsToPayOut
+                .SelectMany(tip => tip.Artists
+                    .Select(artist => new
+                    {
+                        Tip = tip,
+                        Artist = artist,
+                        Payout = tip.Payouts.Where(payout => payout.ArtistId == artist.Id).FirstOrDefault()
+                    }))
+                .ToList();
             var tipIdToArtistTipPayouts = artistTipPayouts
-                .GroupBy(artistTipPayout => artistTipPayout.Tip.Id)
+                .GroupBy(artistTipPayout => artistTipPayout.Tip.Id) 
                 .ToDictionary(g => g.Key, g => g.ToList());
 
             var payouts = new List<(Tip Tip, Artist artist, ulong Amount, string Address)>();
@@ -124,7 +159,7 @@ namespace Lofi.API.Services
 
                 var tipAmount = (decimal)thisTip.Payment!.Amount!.Value;
                 var alreadyPayedOutAmount = thisTipsArtistPayouts
-                    .Sum(artistPayout => (decimal?)artistPayout!.Payout!.GrossPayoutAmount ?? 0m);
+                    .Sum(artistPayout => (decimal?)artistPayout.Payout?.GrossPayoutAmount ?? 0m);
                 var remainingTipAmount = tipAmount - alreadyPayedOutAmount;
                 var artistsToPayout = thisTipsArtistPayouts
                     .Where(artistPayout => artistPayout.Payout == null)
@@ -209,72 +244,99 @@ namespace Lofi.API.Services
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
 
-                await moneroService.OpenWalletAsync(new OpenWalletRpcParameters(_lofiWalletFile, _lofiWalletPassword), cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var balance = await moneroService.GetBalance(new GetBalanceRpcParameters(0), cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var unlockedBalance = balance.Result.UnlockedBalance;
-                _logger.LogInformation($"Lofi wallet has a balance of {balance.Result.Balance} units of which {unlockedBalance} units are spendable for tip payouts");
-                if (unlockedBalance <= 0)
+                try
                 {
-                    _logger.LogInformation($"No funds in lofi wallet to payout tips");
-                    continue;
-                }
+                    await moneroService.OpenWalletAsync(new OpenWalletRpcParameters(_lofiWalletFile, _lofiWalletPassword), cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                var tipsWithMissingPayouts = await GetTipsWithMissingPayoutsInPayoutOrderForAvailableFunds(lofiContext, unlockedBalance, cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
+                    var balance = await moneroService.GetBalance(new GetBalanceRpcParameters(0), cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                var nonFeeAdjustedPayouts = await GetArtistPayoutsForTips(lofiContext, tipsWithMissingPayouts, cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var sharedTransactionFee = await EstimateTransactionFeeToSendPayouts(moneroService, nonFeeAdjustedPayouts, cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var feeAdjustedPayouts = AdjustPayoutsForSharedTransactionFee(nonFeeAdjustedPayouts, sharedTransactionFee);
-                var destinations = feeAdjustedPayouts
-                    .GroupBy(payout => payout.Address)
-                    .Select(payoutsByAddress => new TransferRpcParameters.TransferDestination(
-                        address: payoutsByAddress.Key,
-                        amount: Convert.ToUInt64(payoutsByAddress.Sum(payout => (decimal)payout.NetPayout))))
-                    .ToList();
-                var splitTransfer = await moneroService.SplitTransfer(new SplitTransferRpcParameters(
-                    destinations: destinations,
-                    getTransactionHex: true,
-                    getTransactionMetadata: true,
-                    getTransactionKey: true
-                ));
-
-                var tipIds = feeAdjustedPayouts.Select(p => p.Tip.Id).ToArray();
-                var tipIdToTip = await lofiContext.Tips
-                    .Where(t => tipIds.Contains(t.Id))
-                    .ToDictionaryAsync(t => t.Id, cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-                foreach (var payout in feeAdjustedPayouts)
-                {
-                    if (!tipIdToTip.TryGetValue(payout.Tip.Id, out var tip))
-                    {
+                    var unlockedBalance = balance.Result.UnlockedBalance;
+                    _logger.LogInformation($"Lofi wallet has a balance of {balance.Result.Balance} units of which {unlockedBalance} units are spendable for tip payouts");
+                    if (unlockedBalance <= 0)
+                    { 
+                        _logger.LogInformation($"No funds in lofi wallet to payout tips");
                         continue;
                     }
 
-                    var now = DateTime.Now;
-                    tip.Payouts.Add(new TipPayout
-                    {
-                        Tip = payout.Tip,
-                        Artist = payout.Artist,
-                        WalletAddress = payout.Address,
-                        GrossPayoutAmount = payout.GrossAmount,
-                        PayoutTxFee = sharedTransactionFee,
-                        PayoutTxFeeShare = payout.TransactionFeeShare,
-                        NetPayoutAmount = payout.NetPayout,
-                        CreatedDate = now,
-                        ModifiedDate = now
-                    });
-                }
+                    var tipsWithMissingPayouts = await GetTipsWithMissingPayoutsInPayoutOrderForAvailableFunds(lofiContext, unlockedBalance, cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                await lofiContext.SaveChangesAsync(cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
+                    var nonFeeAdjustedPayouts = await GetArtistPayoutsForTips(lofiContext, tipsWithMissingPayouts, cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (!nonFeeAdjustedPayouts.Any()) continue;
+
+                    var sharedTransactionFee = await EstimateTransactionFeeToSendPayouts(moneroService, nonFeeAdjustedPayouts, cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var feeAdjustedPayouts = AdjustPayoutsForSharedTransactionFee(nonFeeAdjustedPayouts, sharedTransactionFee);
+                    var destinations = feeAdjustedPayouts
+                        .GroupBy(payout => payout.Address)
+                        .Select(payoutsByAddress => new TransferRpcParameters.TransferDestination(
+                            address: payoutsByAddress.Key,
+                            amount: Convert.ToUInt64(payoutsByAddress.Sum(payout => (decimal)payout.NetPayout))))
+                        .ToList();
+                    var splitTransfer = await moneroService.SplitTransfer(new SplitTransferRpcParameters(
+                        destinations: destinations,
+                        getTransactionHex: true,
+                        getTransactionMetadata: true,
+                        getTransactionKey: true
+                    ));
+
+                    var tipIds = feeAdjustedPayouts.Select(p => p.Tip.Id).ToArray();
+                    var tipIdToTip = await lofiContext.Tips
+                        .Where(t => tipIds.Contains(t.Id))
+                        .ToDictionaryAsync(t => t.Id, cancellationToken);
+                    var addressToTransfer = new Dictionary<string, GetTransferByTransactionIdRpcResult.GetTransferTransfer>();
+                    foreach (var txId in splitTransfer.Result.TransactionHashes)
+                    {
+                        var transfer = await moneroService.GetTransferByTransactionId(new GetTransferByTransactionIdRpcParameters(
+                            transactionId: txId
+                        ));
+                        foreach (var destination in transfer.Result.Transfer.Destinations)
+                        {
+                            addressToTransfer[destination.Address] = transfer.Result.Transfer;
+                        }
+                    }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    foreach (var payout in feeAdjustedPayouts)
+                    {
+                        if (!tipIdToTip.TryGetValue(payout.Tip.Id, out var tip))
+                        {
+                            continue;
+                        }
+
+                        if (!addressToTransfer.TryGetValue(payout.Address, out var transfer))
+                        {
+                            continue;
+                        }
+
+                        var now = DateTime.Now;
+                        tip.Payouts.Add(new TipPayout
+                        {
+                            Tip = payout.Tip,
+                            Artist = payout.Artist,
+                            WalletAddress = payout.Address,
+                            TransactionId = transfer.TransactionId,
+                            Timestamp = transfer.Timestamp,
+                            GrossPayoutAmount = payout.GrossAmount,
+                            PayoutTxFee = sharedTransactionFee,
+                            PayoutTxFeeShare = payout.TransactionFeeShare,
+                            NetPayoutAmount = payout.NetPayout,
+                            CreatedDate = now,
+                            ModifiedDate = now
+                        });
+                    }
+
+                    await lofiContext.SaveChangesAsync(cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex.Message + "\n" + ex.StackTrace);
+                }
             }
         }
 

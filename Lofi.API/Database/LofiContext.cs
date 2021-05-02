@@ -1,5 +1,7 @@
 using Lofi.API.Database.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Lofi.API.Database
 {
@@ -16,5 +18,11 @@ namespace Lofi.API.Database
         public virtual DbSet<Tip> Tips { get; set; } = null!;
         public virtual DbSet<TipPayout> TipPayouts { get; set; } = null!;
         public virtual DbSet<TipPayment> TipPayments { get; set; } = null!;
+        public virtual DbSet<ArtistTipPayout> ArtistTipPayouts { get; set; } = null!;
+
+        protected override void OnConfiguring(DbContextOptionsBuilder options) => options
+            .UseNpgsql()
+            .UseLoggerFactory(LoggerFactory.Create(builder => { builder.AddConsole(); }))
+            .UseSnakeCaseNamingConvention();
     }
 }

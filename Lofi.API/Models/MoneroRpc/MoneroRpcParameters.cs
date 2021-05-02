@@ -245,4 +245,18 @@ namespace Lofi.API.Models.MoneroRpc.Parameters
         [JsonPropertyName("tx_data_hex")]
         public string TransactionDataHex { get; set; }
     }
+
+    public class GetTransferByTransactionIdRpcParameters
+    {
+        public GetTransferByTransactionIdRpcParameters(string transactionId, ulong? accountIndex = null)
+        {
+            this.TransactionId = transactionId;
+            this.AccountIndex = accountIndex;
+        }
+
+        [JsonPropertyName("txid")]
+        public string TransactionId {get;set;}
+        [JsonPropertyName("account_index")]
+        public ulong? AccountIndex {get;set;}
+    }
 }

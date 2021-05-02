@@ -22,76 +22,96 @@ namespace Lofi.API.Migrations
             modelBuilder.Entity("AlbumArtist", b =>
                 {
                     b.Property<int>("AlbumsId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("albums_id");
 
                     b.Property<int>("ArtistsId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("artists_id");
 
-                    b.HasKey("AlbumsId", "ArtistsId");
+                    b.HasKey("AlbumsId", "ArtistsId")
+                        .HasName("pk_album_artist");
 
-                    b.HasIndex("ArtistsId");
+                    b.HasIndex("ArtistsId")
+                        .HasDatabaseName("ix_album_artist_artists_id");
 
-                    b.ToTable("AlbumArtist");
+                    b.ToTable("album_artist");
                 });
 
             modelBuilder.Entity("AlbumGenre", b =>
                 {
                     b.Property<int>("AlbumsId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("albums_id");
 
                     b.Property<int>("GenresId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("genres_id");
 
-                    b.HasKey("AlbumsId", "GenresId");
+                    b.HasKey("AlbumsId", "GenresId")
+                        .HasName("pk_album_genre");
 
-                    b.HasIndex("GenresId");
+                    b.HasIndex("GenresId")
+                        .HasDatabaseName("ix_album_genre_genres_id");
 
-                    b.ToTable("AlbumGenre");
+                    b.ToTable("album_genre");
                 });
 
             modelBuilder.Entity("ArtistTip", b =>
                 {
                     b.Property<int>("ArtistsId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("artists_id");
 
                     b.Property<int>("TipsId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("tips_id");
 
-                    b.HasKey("ArtistsId", "TipsId");
+                    b.HasKey("ArtistsId", "TipsId")
+                        .HasName("pk_artist_tip");
 
-                    b.HasIndex("TipsId");
+                    b.HasIndex("TipsId")
+                        .HasDatabaseName("ix_artist_tip_tips_id");
 
-                    b.ToTable("ArtistTip");
+                    b.ToTable("artist_tip");
                 });
 
             modelBuilder.Entity("ArtistTrack", b =>
                 {
                     b.Property<int>("ArtistsId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("artists_id");
 
                     b.Property<int>("TracksId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("tracks_id");
 
-                    b.HasKey("ArtistsId", "TracksId");
+                    b.HasKey("ArtistsId", "TracksId")
+                        .HasName("pk_artist_track");
 
-                    b.HasIndex("TracksId");
+                    b.HasIndex("TracksId")
+                        .HasDatabaseName("ix_artist_track_tracks_id");
 
-                    b.ToTable("ArtistTrack");
+                    b.ToTable("artist_track");
                 });
 
             modelBuilder.Entity("GenreTrack", b =>
                 {
                     b.Property<int>("GenresId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("genres_id");
 
                     b.Property<int>("TracksId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("tracks_id");
 
-                    b.HasKey("GenresId", "TracksId");
+                    b.HasKey("GenresId", "TracksId")
+                        .HasName("pk_genre_track");
 
-                    b.HasIndex("TracksId");
+                    b.HasIndex("TracksId")
+                        .HasDatabaseName("ix_genre_track_tracks_id");
 
-                    b.ToTable("GenreTrack");
+                    b.ToTable("genre_track");
                 });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Album", b =>
@@ -99,37 +119,47 @@ namespace Lofi.API.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasColumnName("id")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int>("CoverPhotoFileId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("cover_photo_file_id");
 
                     b.Property<DateTime?>("CreatedDate")
                         .IsRequired()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_date");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("description");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .IsRequired()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("modified_date");
 
                     b.Property<DateTime?>("ReleaseDate")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("release_date");
 
                     b.Property<string>("Title")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("title");
 
                     b.Property<Guid?>("UniqueId")
                         .IsRequired()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("unique_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_albums");
 
-                    b.HasIndex("CoverPhotoFileId");
+                    b.HasIndex("CoverPhotoFileId")
+                        .HasDatabaseName("ix_albums_cover_photo_file_id");
 
-                    b.ToTable("Albums");
+                    b.ToTable("albums");
                 });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Artist", b =>
@@ -137,31 +167,65 @@ namespace Lofi.API.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasColumnName("id")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<DateTime?>("CreatedDate")
                         .IsRequired()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_date");
 
                     b.Property<DateTime?>("ModifiedDate")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("modified_date");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("name");
 
                     b.Property<int?>("ProfilePictureId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("profile_picture_id");
 
                     b.Property<string>("WalletAddress")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("wallet_address");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_artists");
 
-                    b.HasIndex("ProfilePictureId");
+                    b.HasIndex("ProfilePictureId")
+                        .HasDatabaseName("ix_artists_profile_picture_id");
 
-                    b.ToTable("Artists");
+                    b.ToTable("artists");
+                });
+
+            modelBuilder.Entity("Lofi.API.Database.Entities.ArtistTipPayout", b =>
+                {
+                    b.Property<int>("ArtistId")
+                        .HasColumnType("integer")
+                        .HasColumnName("artist_id");
+
+                    b.Property<int>("PayoutId")
+                        .HasColumnType("integer")
+                        .HasColumnName("payout_id");
+
+                    b.Property<int>("TipId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tip_id");
+
+                    b.HasIndex("ArtistId")
+                        .HasDatabaseName("ix_artist_tip_payouts_artist_id");
+
+                    b.HasIndex("PayoutId")
+                        .HasDatabaseName("ix_artist_tip_payouts_payout_id");
+
+                    b.HasIndex("TipId")
+                        .HasDatabaseName("ix_artist_tip_payouts_tip_id");
+
+                    b.ToTable("artist_tip_payouts");
                 });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Genre", b =>
@@ -169,23 +233,29 @@ namespace Lofi.API.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasColumnName("id")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("Desription")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("desription");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("name");
 
                     b.Property<int?>("ParentGenreId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("parent_genre_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_genres");
 
-                    b.HasIndex("ParentGenreId");
+                    b.HasIndex("ParentGenreId")
+                        .HasDatabaseName("ix_genres_parent_genre_id");
 
-                    b.ToTable("Genres");
+                    b.ToTable("genres");
                 });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Tip", b =>
@@ -193,39 +263,49 @@ namespace Lofi.API.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasColumnName("id")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<DateTime?>("CreatedDate")
                         .IsRequired()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_date");
 
                     b.Property<string>("IntegratedPaymentAddress")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("integrated_payment_address");
 
                     b.Property<string>("Message")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("message");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .IsRequired()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("modified_date");
 
                     b.Property<int>("PaymentId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_id");
 
                     b.Property<string>("PaymentIdHex")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("payment_id_hex");
 
                     b.Property<int?>("TrackId")
                         .IsRequired()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("track_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_tips");
 
-                    b.HasIndex("TrackId");
+                    b.HasIndex("TrackId")
+                        .HasDatabaseName("ix_tips_track_id");
 
-                    b.ToTable("Tips");
+                    b.ToTable("tips");
                 });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.TipPayment", b =>
@@ -233,37 +313,47 @@ namespace Lofi.API.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasColumnName("id")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("numeric(20,0)");
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("amount");
 
                     b.Property<decimal>("BlockHeight")
-                        .HasColumnType("numeric(20,0)");
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("block_height");
 
                     b.Property<DateTime?>("CreatedDate")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_date");
 
                     b.Property<DateTime?>("ModifiedDate")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("modified_date");
 
                     b.Property<decimal>("Timestamp")
-                        .HasColumnType("numeric(20,0)");
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("timestamp");
 
                     b.Property<int?>("TipId")
                         .IsRequired()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("tip_id");
 
                     b.Property<string>("TransactionId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("transaction_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_tip_payments");
 
                     b.HasIndex("TipId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_tip_payments_tip_id");
 
-                    b.ToTable("TipPayments");
+                    b.ToTable("tip_payments");
                 });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.TipPayout", b =>
@@ -271,50 +361,73 @@ namespace Lofi.API.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasColumnName("id")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int?>("ArtistId")
                         .IsRequired()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("artist_id");
+
+                    b.Property<decimal>("BlockHeight")
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("block_height");
 
                     b.Property<DateTime?>("CreatedDate")
                         .IsRequired()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_date");
 
                     b.Property<decimal>("GrossPayoutAmount")
-                        .HasColumnType("numeric(20,0)");
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("gross_payout_amount");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .IsRequired()
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("modified_date");
 
                     b.Property<decimal>("NetPayoutAmount")
-                        .HasColumnType("numeric(20,0)");
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("net_payout_amount");
 
                     b.Property<decimal>("PayoutTxFee")
-                        .HasColumnType("numeric(20,0)");
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("payout_tx_fee");
 
                     b.Property<decimal>("PayoutTxFeeShare")
-                        .HasColumnType("numeric(20,0)");
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("payout_tx_fee_share");
 
-                    b.Property<decimal>("TipAmount")
-                        .HasColumnType("numeric(20,0)");
+                    b.Property<decimal>("Timestamp")
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("timestamp");
 
                     b.Property<int?>("TipId")
                         .IsRequired()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("tip_id");
+
+                    b.Property<string>("TransactionId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("transaction_id");
 
                     b.Property<string>("WalletAddress")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("wallet_address");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_tip_payouts");
 
-                    b.HasIndex("ArtistId");
+                    b.HasIndex("ArtistId")
+                        .HasDatabaseName("ix_tip_payouts_artist_id");
 
                     b.HasIndex(new[] { "TipId", "ArtistId" }, "UIX_TipPayount_Tip_Artist")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("ix_tip_payouts_tip_id_artist_id");
 
-                    b.ToTable("TipPayouts");
+                    b.ToTable("tip_payouts");
                 });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Track", b =>
@@ -322,38 +435,49 @@ namespace Lofi.API.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasColumnName("id")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int?>("AlbumId")
                         .IsRequired()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("album_id");
 
                     b.Property<int?>("AudioFileId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("audio_file_id");
 
                     b.Property<int?>("CoverPhotoFileId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("cover_photo_file_id");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("description");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("title");
 
                     b.Property<int?>("TrackNumber")
                         .IsRequired()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("track_number");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_tracks");
 
-                    b.HasIndex("AlbumId");
+                    b.HasIndex("AlbumId")
+                        .HasDatabaseName("ix_tracks_album_id");
 
-                    b.HasIndex("AudioFileId");
+                    b.HasIndex("AudioFileId")
+                        .HasDatabaseName("ix_tracks_audio_file_id");
 
-                    b.HasIndex("CoverPhotoFileId");
+                    b.HasIndex("CoverPhotoFileId")
+                        .HasDatabaseName("ix_tracks_cover_photo_file_id");
 
-                    b.ToTable("Tracks");
+                    b.ToTable("tracks");
                 });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.UploadedFile", b =>
@@ -361,37 +485,46 @@ namespace Lofi.API.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasColumnName("id")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<byte[]>("Bytes")
                         .IsRequired()
-                        .HasColumnType("bytea");
+                        .HasColumnType("bytea")
+                        .HasColumnName("bytes");
 
                     b.Property<bool>("Deleted")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("deleted");
 
                     b.Property<string>("Extension")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("extension");
 
                     b.Property<string>("FileName")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("file_name");
 
                     b.Property<string>("Hash")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("hash");
 
                     b.Property<string>("MimeType")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("mime_type");
 
                     b.Property<Guid?>("UniqueId")
                         .IsRequired()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("unique_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_uploaded_files");
 
-                    b.ToTable("UploadedFiles");
+                    b.ToTable("uploaded_files");
                 });
 
             modelBuilder.Entity("AlbumArtist", b =>
@@ -399,12 +532,14 @@ namespace Lofi.API.Migrations
                     b.HasOne("Lofi.API.Database.Entities.Album", null)
                         .WithMany()
                         .HasForeignKey("AlbumsId")
+                        .HasConstraintName("fk_album_artist_albums_albums_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Lofi.API.Database.Entities.Artist", null)
                         .WithMany()
                         .HasForeignKey("ArtistsId")
+                        .HasConstraintName("fk_album_artist_artists_artists_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -414,12 +549,14 @@ namespace Lofi.API.Migrations
                     b.HasOne("Lofi.API.Database.Entities.Album", null)
                         .WithMany()
                         .HasForeignKey("AlbumsId")
+                        .HasConstraintName("fk_album_genre_albums_albums_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Lofi.API.Database.Entities.Genre", null)
                         .WithMany()
                         .HasForeignKey("GenresId")
+                        .HasConstraintName("fk_album_genre_genres_genres_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -429,12 +566,14 @@ namespace Lofi.API.Migrations
                     b.HasOne("Lofi.API.Database.Entities.Artist", null)
                         .WithMany()
                         .HasForeignKey("ArtistsId")
+                        .HasConstraintName("fk_artist_tip_artists_artists_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Lofi.API.Database.Entities.Tip", null)
                         .WithMany()
                         .HasForeignKey("TipsId")
+                        .HasConstraintName("fk_artist_tip_tips_tips_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -444,12 +583,14 @@ namespace Lofi.API.Migrations
                     b.HasOne("Lofi.API.Database.Entities.Artist", null)
                         .WithMany()
                         .HasForeignKey("ArtistsId")
+                        .HasConstraintName("fk_artist_track_artists_artists_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Lofi.API.Database.Entities.Track", null)
                         .WithMany()
                         .HasForeignKey("TracksId")
+                        .HasConstraintName("fk_artist_track_tracks_tracks_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -459,12 +600,14 @@ namespace Lofi.API.Migrations
                     b.HasOne("Lofi.API.Database.Entities.Genre", null)
                         .WithMany()
                         .HasForeignKey("GenresId")
+                        .HasConstraintName("fk_genre_track_genres_genres_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Lofi.API.Database.Entities.Track", null)
                         .WithMany()
                         .HasForeignKey("TracksId")
+                        .HasConstraintName("fk_genre_track_tracks_tracks_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -474,6 +617,7 @@ namespace Lofi.API.Migrations
                     b.HasOne("Lofi.API.Database.Entities.UploadedFile", "CoverPhotoFile")
                         .WithMany()
                         .HasForeignKey("CoverPhotoFileId")
+                        .HasConstraintName("fk_albums_uploaded_files_cover_photo_file_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -484,16 +628,48 @@ namespace Lofi.API.Migrations
                 {
                     b.HasOne("Lofi.API.Database.Entities.UploadedFile", "ProfilePicture")
                         .WithMany()
-                        .HasForeignKey("ProfilePictureId");
+                        .HasForeignKey("ProfilePictureId")
+                        .HasConstraintName("fk_artists_uploaded_files_profile_picture_id");
 
                     b.Navigation("ProfilePicture");
+                });
+
+            modelBuilder.Entity("Lofi.API.Database.Entities.ArtistTipPayout", b =>
+                {
+                    b.HasOne("Lofi.API.Database.Entities.Artist", "Artist")
+                        .WithMany()
+                        .HasForeignKey("ArtistId")
+                        .HasConstraintName("fk_artist_tip_payouts_artists_artist_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lofi.API.Database.Entities.TipPayout", "Payout")
+                        .WithMany()
+                        .HasForeignKey("PayoutId")
+                        .HasConstraintName("fk_artist_tip_payouts_tip_payouts_payout_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lofi.API.Database.Entities.Tip", "Tip")
+                        .WithMany()
+                        .HasForeignKey("TipId")
+                        .HasConstraintName("fk_artist_tip_payouts_tips_tip_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Artist");
+
+                    b.Navigation("Payout");
+
+                    b.Navigation("Tip");
                 });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Genre", b =>
                 {
                     b.HasOne("Lofi.API.Database.Entities.Genre", "ParentGenre")
                         .WithMany()
-                        .HasForeignKey("ParentGenreId");
+                        .HasForeignKey("ParentGenreId")
+                        .HasConstraintName("fk_genres_genres_parent_genre_id");
 
                     b.Navigation("ParentGenre");
                 });
@@ -503,6 +679,7 @@ namespace Lofi.API.Migrations
                     b.HasOne("Lofi.API.Database.Entities.Track", "Track")
                         .WithMany()
                         .HasForeignKey("TrackId")
+                        .HasConstraintName("fk_tips_tracks_track_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -514,6 +691,7 @@ namespace Lofi.API.Migrations
                     b.HasOne("Lofi.API.Database.Entities.Tip", "Tip")
                         .WithOne("Payment")
                         .HasForeignKey("Lofi.API.Database.Entities.TipPayment", "TipId")
+                        .HasConstraintName("fk_tip_payments_tips_tip_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -525,12 +703,14 @@ namespace Lofi.API.Migrations
                     b.HasOne("Lofi.API.Database.Entities.Artist", "Artist")
                         .WithMany()
                         .HasForeignKey("ArtistId")
+                        .HasConstraintName("fk_tip_payouts_artists_artist_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Lofi.API.Database.Entities.Tip", "Tip")
                         .WithMany("Payouts")
                         .HasForeignKey("TipId")
+                        .HasConstraintName("fk_tip_payouts_tips_tip_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -544,16 +724,19 @@ namespace Lofi.API.Migrations
                     b.HasOne("Lofi.API.Database.Entities.Album", "Album")
                         .WithMany("Tracks")
                         .HasForeignKey("AlbumId")
+                        .HasConstraintName("fk_tracks_albums_album_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Lofi.API.Database.Entities.UploadedFile", "AudioFile")
                         .WithMany()
-                        .HasForeignKey("AudioFileId");
+                        .HasForeignKey("AudioFileId")
+                        .HasConstraintName("fk_tracks_uploaded_files_audio_file_id");
 
                     b.HasOne("Lofi.API.Database.Entities.UploadedFile", "CoverPhotoFile")
                         .WithMany()
-                        .HasForeignKey("CoverPhotoFileId");
+                        .HasForeignKey("CoverPhotoFileId")
+                        .HasConstraintName("fk_tracks_uploaded_files_cover_photo_file_id");
 
                     b.Navigation("Album");
 

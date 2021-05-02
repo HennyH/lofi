@@ -60,6 +60,10 @@ namespace Lofi.API.Services
             var track = await _lofiContext.Tracks.FindAsync(new object[] { trackId }, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (track == null) throw new ArgumentException(nameof(trackId), $"No such track with Id = {trackId}");
+            await _lofiContext.Entry(track)
+                .Collection(t => t.Artists)
+                .LoadAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
 
             var tip = new Tip
             {
@@ -80,6 +84,7 @@ namespace Lofi.API.Services
             tip.IntegratedPaymentAddress = integratedAddressResponse.Result.IntegratedAddress;
             tip.CreatedDate = tip.CreatedDate ?? now;
             tip.ModifiedDate = now;
+            tip.Artists = track.Artists;
 
             _lofiContext.Tips.Add(tip);
             await _lofiContext.SaveChangesAsync();

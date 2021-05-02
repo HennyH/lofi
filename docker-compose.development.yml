@@ -59,6 +59,8 @@ services:
     restart: always
     ports:
       - 8030:8080
+    depends_on:
+      - db
   monerod:
     image: xmrto/monero:v0.17.2.0
     command: --testnet --data-dir /monero

@@ -23,9 +23,10 @@ namespace Lofi.API.Services
         public const string GET_TRANSFERS = "get_transfers";
         public const string GET_BALANCE = "get_balance";
         public const string TRANSFER = "transfer";
-        public const string SPLIT_TRANSFER = "split_transfer";
+        public const string SPLIT_TRANSFER = "transfer_split";
         public const string DESCRIBE_TRANSFER = "describe_transfer";
         public const string SUBMIT_TRANSFER = "submit_transfer";
+        public const string GET_TRANSFER_BY_TXID = "get_transfer_by_txid";
     }
 
     public class MoneroService
@@ -180,6 +181,15 @@ namespace Lofi.API.Services
         {
             return await PerformWalletRpc<RpcParameters.SubmitTransferRpcParameters, RpcResults.SubmitTransferRpcResult>(
                 MoneroWalletRpcMethod.SUBMIT_TRANSFER,
+                parameters,
+                cancellationToken: cancellationToken
+            );
+        }
+
+        public async Task<MoneroRpcResponse<RpcResults.GetTransferByTransactionIdRpcResult>> GetTransferByTransactionId(RpcParameters.GetTransferByTransactionIdRpcParameters parameters, CancellationToken cancellationToken = default)
+        {
+            return await PerformWalletRpc<RpcParameters.GetTransferByTransactionIdRpcParameters, RpcResults.GetTransferByTransactionIdRpcResult>(
+                MoneroWalletRpcMethod.GET_TRANSFER_BY_TXID,
                 parameters,
                 cancellationToken: cancellationToken
             );

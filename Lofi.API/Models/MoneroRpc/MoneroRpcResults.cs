@@ -503,4 +503,98 @@ namespace Lofi.API.Models.MoneroRpc.Results
         [JsonPropertyName("tx_hash_list")]
         public IEnumerable<string> TransactionHashList { get; set; }
     }
+
+    public class GetTransferByTransactionIdRpcResult
+    {
+        public GetTransferByTransactionIdRpcResult(GetTransferTransfer transfer)
+        {
+            this.Transfer = transfer;
+        }
+
+        [JsonPropertyName("transfer")]
+        public GetTransferTransfer Transfer { get; set; }
+
+        public class GetTransferTransfer
+        {
+            public GetTransferTransfer(
+                    string address,
+                    ulong amount,
+                    ulong confirmations,
+                    IEnumerable<Destination> destinations,
+                    bool doubleSpendSeen,
+                    ulong fee,
+                    ulong height,
+                    string note,
+                    string paymentId,
+                    PaymentSubaddressIndexRpcResult subaddressIndex,
+                    ulong suggestedConfirmationsThreshold,
+                    ulong timestamp,
+                    string transactionId,
+                    string transactionType,
+                    ulong unlockTime
+                )
+            {
+                this.Address = address;
+                this.Amount = amount;
+                this.Confirmations = confirmations;
+                this.Destinations = destinations;
+                this.DoubleSpendSeen = doubleSpendSeen;
+                this.Fee = fee;
+                this.Height = height;
+                this.Note = note;
+                this.PaymentId = paymentId;
+                this.SubaddressIndex = subaddressIndex;
+                this.SuggestedConfirmationsThreshold = suggestedConfirmationsThreshold;
+                this.Timestamp = timestamp;
+                this.TransactionId = transactionId;
+                this.TransactionType = transactionType;
+                this.UnlockTime = unlockTime;
+            }
+
+            [JsonPropertyName("address")]
+            public string Address { get; set; }
+            [JsonPropertyName("amount")]
+            public ulong Amount { get; set; }
+            [JsonPropertyName("confirmations")]
+            public ulong Confirmations { get; set; }
+            [JsonPropertyName("destinations")]
+            public IEnumerable<Destination> Destinations { get; set; }
+            [JsonPropertyName("double_spend_seen")]
+            public bool DoubleSpendSeen { get; set; }
+            [JsonPropertyName("fee")]
+            public ulong Fee { get; set; }
+            [JsonPropertyName("height")]
+            public ulong Height { get; set; }
+            [JsonPropertyName("note")]
+            public string Note { get; set; }
+            [JsonPropertyName("payment_id")]
+            public string PaymentId { get; set; }
+            [JsonPropertyName("subaddr_index")]
+            public PaymentSubaddressIndexRpcResult SubaddressIndex { get; set; }
+            [JsonPropertyName("suggested_confirmations_threshold")]
+            public ulong SuggestedConfirmationsThreshold { get; set; }
+            [JsonPropertyName("timestamp")]
+            public ulong Timestamp { get; set; }
+            [JsonPropertyName("txid")]
+            public string TransactionId { get; set; }
+            [JsonPropertyName("type")]
+            public string TransactionType { get; set; }
+            [JsonPropertyName("unlock_time")]
+            public ulong UnlockTime { get; set; }
+        }
+
+        public class Destination
+        {
+            public Destination(ulong amount, string address)
+            {
+                this.Amount = amount;
+                this.Address = address;
+            }
+
+            [JsonPropertyName("amount")]
+            public ulong Amount { get; set; }
+            [JsonPropertyName("address")]
+            public string Address { get; set; }
+        }
+    }
 }

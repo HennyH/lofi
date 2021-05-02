@@ -18,14 +18,11 @@ namespace Lofi.API.Database.Entities
         [Required]
         public int? ArtistId { get; set; }
         public string? WalletAddress { get; set; }
-        // [Required]
-        // public string? TransactionHash { get; set; }
-        // [Required]
-        // public string? TransactionKey { get; set; }
-        // [Required]
-        // public string? TransactionMetadata { get; set; }
         [Required]
-        public ulong? TipAmount { get; set; }
+        public string? TransactionId { get; set; }
+        public ulong? BlockHeight { get; set; }
+        [Required]
+        public ulong? Timestamp { get; set; }
         [Required]
         public ulong? GrossPayoutAmount { get; set; }
         [Required]
