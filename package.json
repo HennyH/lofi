@@ -11,6 +11,8 @@
     "dev:run": "./scripts/dev-run.sh",
     "dev:exec": "./scripts/dev-exec.sh",
     "dev:ef": "./scripts/dev-ef.sh",
+    "test": "python ./scripts/run_tests.py",
+    "test:up": "./scripts/test-up.sh",
     "prod:build": "./scripts/prod-build.sh",
     "prod:up": "./scripts/prod-up.sh"
   },

@@ -31,8 +31,8 @@ namespace Lofi.API.Services
 
     public class MoneroService
     {
-        private const string DEFAULT_MONERO_DAEMON_RPC_URI = "http://monerod:28081/json_rpc";
-        private const string DEFAULT_MONERO_WALLET_RPC_URI = "http://monero-wallet-rpc:28083/json_rpc";
+        private const string DEFAULT_MONERO_DAEMON_RPC_URI = "http://localhost:28081/json_rpc";
+        private const string DEFAULT_MONERO_WALLET_RPC_URI = "http://localhost:28083/json_rpc";
         private ILogger<MoneroService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string _deamonRpcUri;

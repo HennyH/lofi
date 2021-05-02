@@ -7,6 +7,7 @@ using Lofi.API.Database.Entities;
 using Lofi.API.Models.MoneroRpc;
 using Lofi.API.Models.MoneroRpc.Parameters;
 using Lofi.API.Models.MoneroRpc.Results;
+using Lofi.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

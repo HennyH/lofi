@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Lofi.API.Database;
 using Lofi.API.Services;
+using Lofi.Database;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;

@@ -1,4 +1,5 @@
 using Lofi.API.Database;
+using Lofi.Database;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 

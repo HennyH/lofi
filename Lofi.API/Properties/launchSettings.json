@@ -4,7 +4,7 @@
     "Lofi.API": {
       "commandName": "Project",
       "dotnetRunMessages": "true",
-      "applicationUrl": "http://+:80",
+      "applicationUrl": "http://+:8020",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
