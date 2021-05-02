@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
-namespace Lofi.API.Migrations
+namespace Lofi.Database.Migrations
 {
     public partial class InitialMigration : Migration
     {
@@ -311,6 +311,9 @@ namespace Lofi.API.Migrations
                     tip_id = table.Column<int>(type: "integer", nullable: false),
                     artist_id = table.Column<int>(type: "integer", nullable: false),
                     wallet_address = table.Column<string>(type: "text", nullable: true),
+                    transaction_id = table.Column<string>(type: "text", nullable: false),
+                    block_height = table.Column<decimal>(type: "numeric(20,0)", nullable: true),
+                    timestamp = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
                     gross_payout_amount = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
                     net_payout_amount = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
                     payout_tx_fee = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
@@ -352,9 +355,9 @@ namespace Lofi.API.Migrations
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "fk_artist_tip_payouts_tip_payments_payout_id",
+                        name: "fk_artist_tip_payouts_tip_payouts_payout_id",
                         column: x => x.payout_id,
-                        principalTable: "tip_payments",
+                        principalTable: "tip_payouts",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -479,10 +482,10 @@ namespace Lofi.API.Migrations
                 name: "genre_track");
 
             migrationBuilder.DropTable(
-                name: "tip_payouts");
+                name: "tip_payments");
 
             migrationBuilder.DropTable(
-                name: "tip_payments");
+                name: "tip_payouts");
 
             migrationBuilder.DropTable(
                 name: "genres");

@@ -1,9 +1,11 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Lofi.API.Database;
 using Lofi.API.Database.Entities;
 using Lofi.API.Models.Requests;
+using Lofi.API.Models.Responses;
+using Lofi.API.Shared;
+using Lofi.Database;
 using Microsoft.Extensions.Logging;
 
 namespace Lofi.API.Services
@@ -33,7 +35,7 @@ namespace Lofi.API.Services
             artist.WalletAddress = upsertArtistRequest.WalletAddress ?? artist.WalletAddress;
             artist.ProfilePicture = upsertArtistRequest.ProfilePicture == null
                 ? artist.ProfilePicture
-                : await UploadedFile.FromFormFileAsync(upsertArtistRequest.ProfilePicture, cancellationToken);
+                : await upsertArtistRequest.ProfilePicture.AsUploadedFile(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             artist.CreatedDate = artist.CreatedDate ?? now;
             artist.ModifiedDate = now;
@@ -47,6 +49,12 @@ namespace Lofi.API.Services
             cancellationToken.ThrowIfCancellationRequested();
             return artist;
         }
-        
+
+        public async Task<Artist?> GetArtist(int artistId, CancellationToken cancellationToken = default)
+        {
+            var artist = await _lofiContext.Artists.FindAsync(new object[] { artistId }, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            return artist;
+        }
     }
 }

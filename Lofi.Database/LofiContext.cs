@@ -1,9 +1,8 @@
 using Lofi.API.Database.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 
-namespace Lofi.API.Database
+namespace Lofi.Database
 {
     public class LofiContext : DbContext
     {
@@ -20,8 +19,8 @@ namespace Lofi.API.Database
         public virtual DbSet<TipPayment> TipPayments { get; set; } = null!;
         public virtual DbSet<ArtistTipPayout> ArtistTipPayouts { get; set; } = null!;
 
-        protected override void OnConfiguring(DbContextOptionsBuilder options) => options
-            .UseNpgsql()
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) => optionsBuilder
+            .UseNpgsql("name=ConnectionStrings:LofiContext")
             .UseLoggerFactory(LoggerFactory.Create(builder => { builder.AddConsole(); }))
             .UseSnakeCaseNamingConvention();
     }

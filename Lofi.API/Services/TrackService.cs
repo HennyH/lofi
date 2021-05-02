@@ -1,13 +1,10 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Lofi.API.Database;
 using Lofi.API.Database.Entities;
 using Lofi.API.Models.Requests;
 using Lofi.API.Shared;
+using Lofi.Database;
 
 namespace Lofi.API.Services
 {
@@ -33,10 +30,12 @@ namespace Lofi.API.Services
             track.Description = upsertTrackRequest.Description ?? track.Description;
             track.CoverPhotoFile = upsertTrackRequest.CoverPhotoFile == null
                 ? track.CoverPhotoFile
-                : await UploadedFile.FromFormFileAsync(upsertTrackRequest.CoverPhotoFile);
+                : await upsertTrackRequest.CoverPhotoFile.AsUploadedFile(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             track.AudioFile = upsertTrackRequest.AudioFile == null
                 ? track.AudioFile
-                : await UploadedFile.FromFormFileAsync(upsertTrackRequest.AudioFile);
+                : await upsertTrackRequest.AudioFile.AsUploadedFile(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             
             if (upsertTrackRequest.GenreIds != null)
             {

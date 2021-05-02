@@ -3,46 +3,18 @@
 version: '3.4'
 
 services:
-  api:
-    image: lofi/api
-    build:
-      context: Lofi.API
-      dockerfile: Dockerfile.development
-    ports:
-      - 8010:80
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:80
-    volumes:
-      - ~/.vsdbg:/remote_debugger:rw
-      - ~/.aspnet/https:/https:ro
-      - ./Lofi.API:/home/app/src
-      - "${MUSIC_DIRECTORY:-~/music}:/music"
-    depends_on:
-      - db
-  app:
-    image: lofi/app
-    build:
-      context: Lofi.App
-      dockerfile: Dockerfile.development
-    ports:
-      - 8020:80
-    environment:
-      - ROLLUP_WATCH=1
-    volumes:
-      - ./Lofi.App:/src
-    depends_on:
-      - api
   nginx:
-    image: lofi/nginx
-    build:
-      context: Lofi.Nginx
-      dockerfile: Dockerfile.development
+    image: nginx
     ports:
       - 80:80
+    environment:
+      LOFI_APP_HOST: ${DOCKER_GATEWAY_HOST:-host.docker.internal}
+      LOFI_APP_PORT: ${LOFI_APP_PORT:-8010}
+      LOFI_API_HOST: ${DOCKER_GATEWAY_HOST:-host.docker.internal}
+      LOFI_API_PORT: ${LOFI_API_PORT:-8020}
     volumes:
-      - "./Lofi.Nginx/nginx.development.conf:/etc/nginx/nginx.conf"
-      - "${MUSIC_DIRECTORY:-~/music}:/var/www/lofi/media"
+      - ./Lofi.Nginx/development:/etc/nginx/templates/
+      - ${MUSIC_DIRECTORY:-~/music}:/var/www/lofi/media
   db:
     image: postgres
     restart: always

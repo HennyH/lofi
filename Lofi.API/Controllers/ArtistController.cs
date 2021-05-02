@@ -1,7 +1,9 @@
 using System;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Lofi.API.Models.Requests;
+using Lofi.API.Models.Responses;
 using Lofi.API.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -30,5 +32,18 @@ namespace Lofi.API.Controllers
             var artist = await _artistService.UpsertArtist(artistId: null, upsertArtistRequest, now: DateTime.Now, cancellationToken: cancellationToken);
             return artist.Id;
         }      
+
+        [HttpGet("{artistId}")]
+        public async Task<ActionResult> GetArtist([FromRoute] int artistId, CancellationToken cancellationToken = default)
+        {
+            var artist = await _artistService.GetArtist(artistId, cancellationToken);
+            if (artist == null) return new StatusCodeResult((int)HttpStatusCode.NotFound);
+            return new JsonResult(new ArtistDto
+            {
+                ArtistId = artist.Id,
+                Name = artist.Name,
+                WalletAddress = artist.WalletAddress
+            });
+        }
     }
 }

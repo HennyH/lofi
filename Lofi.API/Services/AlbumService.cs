@@ -2,10 +2,10 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Lofi.API.Database;
 using Lofi.API.Database.Entities;
 using Lofi.API.Models.Requests;
 using Lofi.API.Shared;
+using Lofi.Database;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lofi.API.Services
@@ -33,7 +33,8 @@ namespace Lofi.API.Services
             album.Description = upsertAlbumRequest.Description ?? album.Description;
             album.CoverPhotoFile = upsertAlbumRequest.CoverPhotoFile == null
                 ? album.CoverPhotoFile
-                : await UploadedFile.FromFormFileAsync(upsertAlbumRequest.CoverPhotoFile);
+                : await upsertAlbumRequest.CoverPhotoFile.AsUploadedFile(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             album.ReleaseDate = upsertAlbumRequest.ReleaseDate ?? album.ReleaseDate;
             album.CreatedDate = album.CreatedDate ?? now;
             album.ModifiedDate = now;
@@ -132,6 +133,18 @@ namespace Lofi.API.Services
 
             await _lofiContext.SaveChangesAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        public async Task<Album?> GetAlbum(int albumId, CancellationToken cancellationToken = default)
+        {
+            var album = await _lofiContext.Albums
+                .Where(a => a.Id == albumId)
+                .Include(a => a.Genres)
+                .Include(a => a.Artists)
+                .Include(a => a.Tracks)
+                .FirstOrDefaultAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            return album;
         }
     }
 }
