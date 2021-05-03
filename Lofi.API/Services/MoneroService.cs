@@ -9,6 +9,7 @@ using System.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Lofi.API.Shared;
+using System.Collections.Concurrent;
 
 namespace Lofi.API.Services
 {
@@ -37,45 +38,83 @@ namespace Lofi.API.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string _deamonRpcUri;
         private readonly string _walletRpcUri;
+        private Task _previousWalletRpc = Task.CompletedTask;
+        private readonly object _walletRpcLock = new object();
+        private readonly HttpClient _httpClient;
+
+
         public MoneroService(ILogger<MoneroService> logger, IConfiguration configuration, IHttpClientFactory httpClientFactory)
         {
             this._logger = logger;
             this._httpClientFactory = httpClientFactory;
+            this._httpClient = httpClientFactory.CreateClient();
             this._deamonRpcUri = configuration.GetValue<string>("MONERO_DAEMON_RPC_URI", DEFAULT_MONERO_DAEMON_RPC_URI);
             this._walletRpcUri = configuration.GetValue<string>("MONERO_WALLET_RPC_URI", DEFAULT_MONERO_WALLET_RPC_URI);
         }
 
-        public async Task<MoneroRpcResponse<TResult>> PerformWalletRpc<TParameters, TResult>(
+        public Task<MoneroRpcResponse<TResult>> PerformWalletRpc<TParameters, TResult>(
                 string method,
                 TParameters parameters,
                 string? id = null,
                 string? jsonRpc = null,
+                string? walletFilename = null,
+                string? walletPassword = null,
                 CancellationToken cancellationToken = default)
             where TResult : class
             where TParameters : class
         {
             id ??= MoneroRpcRequest<TParameters>.DEFAULT_ID;
             jsonRpc ??= MoneroRpcRequest<TParameters>.DEFAULT_JSON_RPC;
-            var rpcRequest = new MoneroRpcRequest<TParameters>(method, parameters, id, jsonRpc);
-            
-            using var httpClient = _httpClientFactory.CreateClient();
-            var httpContent = rpcRequest.AsHttpContent();
-            _logger.LogInformation(LogEvent.MONERO_RPC_REQUEST, await httpContent.ReadAsStringAsync());
-            using var httpResponse = await httpClient.PostAsync(_walletRpcUri, httpContent, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            httpResponse.EnsureSuccessStatusCode();
 
-            var json = await httpResponse.Content.ReadAsStringAsync();
-            _logger.LogInformation(LogEvent.MONERO_RPC_RESPONSE, json);
-            var response = JsonSerializer.Deserialize<MoneroRpcResponse<TResult>>(json);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (response == null
-                    || (response.Error == null && response.Result == null)
-                    || (response.Error != null && response.Result != null))
+            lock (_walletRpcLock)
             {
-                throw new Exception("The monero deamon returned an invalid response.");
+                if (walletFilename != null)
+                {
+                    _previousWalletRpc = _previousWalletRpc.ContinueWith(
+                        async (_) =>
+                        {
+                            var openWalletRequest = new MoneroRpcRequest<RpcParameters.OpenWalletRpcParameters>(
+                                MoneroWalletRpcMethod.OPEN_WALLET,
+                                parameters: new RpcParameters.OpenWalletRpcParameters(filename: walletFilename, password: walletPassword ?? string.Empty)
+                            );
+                            var openWalletHttpContent = openWalletRequest.AsHttpContent();
+                            using var openWalletHttpResponse = await _httpClient.PostAsync(_walletRpcUri, openWalletHttpContent, cancellationToken);
+                            var x = await openWalletHttpResponse.Content.ReadAsStringAsync();
+                            cancellationToken.ThrowIfCancellationRequested();
+                        },
+                        cancellationToken,
+                        TaskContinuationOptions.None,
+                        TaskScheduler.Default
+                    ).Unwrap();
+                }
+
+                var task = _previousWalletRpc.ContinueWith(
+                    async (_) =>
+                    {
+                        var rpcRequest = new MoneroRpcRequest<TParameters>(method, parameters, id, jsonRpc);
+                        var rpcRequestContent = rpcRequest.AsHttpContent();
+                        using var rpcHttpResponse = await _httpClient.PostAsync(_walletRpcUri, rpcRequestContent, cancellationToken);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        rpcHttpResponse.EnsureSuccessStatusCode();
+
+                        var json = await rpcHttpResponse.Content.ReadAsStringAsync();
+                        var response = JsonSerializer.Deserialize<MoneroRpcResponse<TResult>>(json);
+                        if (response == null
+                                || (response.Error == null && response.Result == null)
+                                || (response.Error != null && response.Result != null))
+                        {
+                            throw new Exception("The monero deamon returned an invalid response.");
+                        }
+                        return response;
+                    },
+                    cancellationToken,
+                    TaskContinuationOptions.OnlyOnRanToCompletion,
+                    TaskScheduler.Default
+                ).Unwrap();
+
+                _previousWalletRpc = task;
+                return task;
             }
-            return response;
         }
 
         public async Task<MoneroRpcResponse<RpcResults.EmptyRpcResult>> OpenWalletAsync(RpcParameters.OpenWalletRpcParameters parameters, CancellationToken cancellationToken = default)

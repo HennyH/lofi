@@ -36,7 +36,7 @@ namespace Lofi.API.Models.MoneroRpc.Parameters
 
     public class MakeUriRpcParameters
     {
-        public MakeUriRpcParameters(string address, int? amount = null, string? recipientName = null, string? transactionDescription = null)
+        public MakeUriRpcParameters(string address, ulong? amount = null, string? recipientName = null, string? transactionDescription = null)
         {
             this.Address = address;
             this.Amount = amount;
@@ -47,7 +47,7 @@ namespace Lofi.API.Models.MoneroRpc.Parameters
         [JsonPropertyName("address")]
         public string Address { get; set; }
         [JsonPropertyName("amount")]
-        public int? Amount { get; set; }
+        public ulong? Amount { get; set; }
         [JsonPropertyName("recipient_name")]
         public string? RecipientName { get; set; }
         [JsonPropertyName("tx_description")]

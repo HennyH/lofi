@@ -52,7 +52,7 @@ namespace Lofi.API.Services
                 ?? 1;
             while (true)
             {
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
 
                 _logger.LogInformation($"Searching for incoming tip transfers from block height {currentBlockHeight}");
@@ -74,9 +74,9 @@ namespace Lofi.API.Services
                     .GroupBy(t => Convert.ToUInt16(t.PaymentId, 16))
                     .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.Timestamp).First());
                 var paymentIds = paymentIdToTransfer.Select(g => g.Key).ToArray();
-                _logger.LogInformation($"Looking for tips with payment ids: {(string.Join(", ", paymentIds.Select(i => i.ToString())))}");
+                _logger.LogInformation($"Looking for unpaid tips with payment ids: {(string.Join(", ", paymentIds.Select(i => i.ToString())))}");
                 var tips = await lofiContext.Tips
-                    .Where(t => t.PaymentId.HasValue && paymentIds.Contains(t.PaymentId.Value))
+                    .Where(t => t.Payment == null && t.PaymentId.HasValue && paymentIds.Contains(t.PaymentId.Value))
                     .ToListAsync(cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
 

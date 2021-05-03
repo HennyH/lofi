@@ -92,7 +92,7 @@ namespace Lofi.API.Services
             return tip;
         }
 
-        public async Task<string> GetTipPaymentUrl(int tipId, int? amount = null, CancellationToken cancellationToken = default)
+        public async Task<string> GetTipPaymentUrl(int tipId, ulong? amount = null, CancellationToken cancellationToken = default)
         {
             var tip = await _lofiContext.Tips.FindAsync(new object[] { tipId }, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
