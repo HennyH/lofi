@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lofi.API.Database.Entities;
 using Lofi.API.Models.MoneroRpc.Parameters;
+using Lofi.API.Models.MoneroRpc.Results;
 using Lofi.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -60,28 +61,32 @@ namespace Lofi.API.Services
                     _logger.LogInformation($"Searching for incoming tip transfers from block height {currentBlockHeight}");
                     await moneroService.OpenWalletAsync(new OpenWalletRpcParameters(_lofiWalletFile, _lofiWalletPassword), cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
-                    var transfers = await moneroService.GetTransfers(new GetTransfersRpcParameters
+                    var confirmedTransfersResponse = await moneroService.GetTransfers(new GetTransfersRpcParameters
                     {
                         In = true,
-                        // TODO(HH): When searching by height it looks like we only search
-                        // for confirmed transactions which is problematic since we're happy to accept 0conf.
-                        // waiting for blocks makes the tests unreliable.
-                        // FilterByHeight = true,
-                        // MinHeight = currentBlockHeight
+                        FilterByHeight = true,
+                        MinHeight = currentBlockHeight
+                    }, cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var mempoolTransfersResponse = await moneroService.GetTransfers(new GetTransfersRpcParameters
+                    {
+                        Pool = true
                     }, cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (transfers.Result.InTransfers == null || !transfers.Result.InTransfers.Any())
+                    var transfers = Enumerable.Empty<GetTransfersRpcResult.Transfer>()
+                        .Concat(confirmedTransfersResponse.Result.InTransfers ?? Enumerable.Empty<GetTransfersRpcResult.Transfer>())
+                        .Concat(mempoolTransfersResponse.Result.PoolTransfers ?? Enumerable.Empty<GetTransfersRpcResult.Transfer>())
+                        .ToList();
+                    
+                    if (!transfers.Any())
                     {
                         _logger.LogInformation($"Found no incoming transfers to lofi wallet");
                         continue;
                     }
-                    _logger.LogInformation($"Found {transfers.Result.InTransfers.Count()} incoming transfers to lofi wallet");
+                    _logger.LogInformation($"Found {transfers.Count} incoming transfers to lofi wallet");
 
-                    // TODO(HH): payment id's get reused past ushort.MaxValue so we need logic
-                    // here which correctly assocaites a transfer to it's tip despite the
-                    // payment ids not being unique.
-                    var paymentIdToTransfer = transfers.Result.InTransfers
+                    var paymentIdToTransfer = transfers
                         .GroupBy(t => Convert.ToUInt16(t.PaymentId, 16))
                         .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.Timestamp).First());
                     var paymentIds = paymentIdToTransfer.Select(g => g.Key).ToArray();
@@ -125,7 +130,7 @@ namespace Lofi.API.Services
                         _logger.LogInformation($"Matched tip id {tip.Id} with payment id {tip.PaymentId} ({tip.Payment.Amount} units) to transfer with txid {tip.Payment.TransactionId} at height {transfer.Height}");
                     }
 
-                    currentBlockHeight = transfers.Result.InTransfers.Max(t => t.Height);
+                    currentBlockHeight = transfers.Max(t => t.Height);
                     _logger.LogInformation($"Incoming tip transfers up to {currentBlockHeight} have been synched");
 
                     await lofiContext.SaveChangesAsync(cancellationToken);

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Lofi.API.Database.Entities;
+using Lofi.API.Models.MoneroRpc;
 using Lofi.API.Models.MoneroRpc.Parameters;
 using Lofi.API.Models.MoneroRpc.Results;
 using Lofi.Database;
@@ -16,7 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Lofi.API.Services
 {
-    public class TipPayoutService : IHostedService
+    public class TipPayoutService : BackgroundService
     {
         private const string DEFAULT_LOFI_WALLET_FILE = "testwallet";
         private const string DEFAULT_LOFI_WALLET_PASSWORD = "";
@@ -24,6 +25,38 @@ namespace Lofi.API.Services
         private readonly ILogger<TipPayoutService> _logger;
         private readonly string _lofiWalletFile;
         private readonly string _lofiWalletPassword;
+
+        public struct PayoutSet
+        {
+            public PayoutSet(string address, ulong amount, IReadOnlyCollection<TipPayout> payouts)
+            {
+                this.Address = address;
+                this.Amount = amount;
+                this.Payouts = payouts;
+            }
+
+            public readonly string Address;
+            public readonly ulong Amount;
+            public readonly IReadOnlyCollection<TipPayout> Payouts;
+        }
+
+        public struct FeeAdjustedPayoutSet
+        {
+            public FeeAdjustedPayoutSet(string address, ulong feeAdjustedAmount, ulong transactionFeeShare, ulong perPayoutTransactionFeeShare, IReadOnlyCollection<TipPayout> payouts)
+            {
+                this.Address = address;
+                this.FeeAdjustedAmount = feeAdjustedAmount;
+                this.TransactionFeeShare = transactionFeeShare;
+                this.PerPayoutTransactionFeeShare = perPayoutTransactionFeeShare;
+                this.Payouts = payouts;
+            }
+
+            public readonly string Address;
+            public readonly ulong FeeAdjustedAmount;
+            public readonly ulong TransactionFeeShare;
+            public readonly ulong PerPayoutTransactionFeeShare;
+            public readonly IReadOnlyCollection<TipPayout> Payouts;
+        }
 
         public TipPayoutService(ILogger<TipPayoutService> logger, IServiceScopeFactory serviceScopeFactory, IConfiguration configuration)
         {
@@ -33,16 +66,9 @@ namespace Lofi.API.Services
             this._lofiWalletPassword = configuration.GetValue<string>("LOFI_WALLET_PASSWORD", DEFAULT_LOFI_WALLET_PASSWORD);
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
+        private static async Task<IReadOnlyCollection<TipPayout>> GetPendingPayoutsInOrderForAvailableFundsAsync(LofiContext lofiContext, ulong availableFunds, CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Tip Payout service is running.");
-            PayoutTips(cancellationToken);
-            return Task.CompletedTask;
-        }
-
-        private static async Task<IEnumerable<TipPayout>> GetPendingPayoutsInOrderForAvailableFunds(LofiContext lofiContext, ulong availableFunds, CancellationToken cancellationToken = default)
-        {
-            var orderedPendingPayoutsQuery =  lofiContext.TipPayouts
+            var orderedPendingPayoutsQuery = lofiContext.TipPayouts
                 .AsQueryable()
                 /* payout records exist prior to being payed out (they initially record an intention
                  * to pay out part of a tip), after they do get payed out they will not be in a
@@ -72,20 +98,107 @@ namespace Lofi.API.Services
                 .ToListAsync(cancellationToken);
         }
 
-        private static IReadOnlyList<(string Address, ulong TotalAmount, List<TipPayout> Payouts)> GroupPayoutsByDestination(IEnumerable<TipPayout> payouts)
+        private static IEnumerable<PayoutSet> GroupPayoutsIntoSetsByWalletAddress(IEnumerable<TipPayout> payouts)
         {
-            return payouts
-                .GroupBy(payout => payout.Artist!.WalletAddress!)
-                .Select(g =>
-                {
-                    var artistsPayouts = g.ToList();
-                    var totalPayout = (ulong)artistsPayouts.Sum(p => p.Amount ?? 0m);
-                    return (g.Key, totalPayout, artistsPayouts);
-                })
-                .ToList();
+            var payoutsByWalletAddress = payouts.GroupBy(payout => payout.Artist!.WalletAddress!);
+            foreach (var payoutGroup in payoutsByWalletAddress)
+            {
+                var walletAddress = payoutGroup.Key;
+                var payoutsInGroup = payoutGroup.ToList();
+                var totalPayoutAmount = (ulong)payoutGroup.Sum(p => p.Amount ?? 0m);
+                yield return new PayoutSet(walletAddress, totalPayoutAmount, payoutsInGroup);
+            }
         }
 
-        public async Task PayoutTips(CancellationToken cancellationToken)
+        private async Task<IReadOnlyCollection<GetTransferByTransactionIdRpcResult.GetTransferTransfer>> GetTransfersForTransactionIds(MoneroService moneroService, IEnumerable<string> transactionIds)
+        {
+            var transfers = new List<GetTransferByTransactionIdRpcResult.GetTransferTransfer>();
+            foreach (var transactionId in transactionIds)
+            {
+                var response = await moneroService.GetTransferByTransactionId(new GetTransferByTransactionIdRpcParameters(
+                    transactionId: transactionId
+                ));
+
+                if (response.Error != null)
+                {
+                    _logger.LogWarning($"Failed to retrieve transfer for transaction id {transactionId}");
+                }
+                else
+                {
+                    _logger.LogInformation($"Retrieved ransfer for transaction id {transactionId}");
+                    transfers.Add(response.Result.Transfer);
+                }
+            }
+
+            return transfers;
+        }
+
+        private async Task<IEnumerable<FeeAdjustedPayoutSet>> AdjustPayoutSetsToAccountForTransactionFeesAsync(MoneroService moneroService, IReadOnlyCollection<PayoutSet> payoutSets, CancellationToken cancellationToken)
+        {
+            var estimatedSplitTransfer = await moneroService.SplitTransfer(new SplitTransferRpcParameters(
+                destinations: payoutSets.Select(payoutSet => new TransferRpcParameters.TransferDestination(
+                    amount: payoutSet.Amount,
+                    address: payoutSet.Address
+                )),
+                doNotRelay: true
+            ), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            var sharedTransactionFee = (ulong)estimatedSplitTransfer.Result.Fees.Sum(fee => (decimal)fee);
+            var perDestinationFeeShare = (ulong)((decimal)sharedTransactionFee / (decimal)payoutSets.Count);
+            _logger.LogInformation($"Estimated transaction fee for current payout sets is {sharedTransactionFee}");
+
+            var feeAdjustedPayoutSets = new List<FeeAdjustedPayoutSet>();
+            foreach (var payoutSet in payoutSets)
+            {
+                feeAdjustedPayoutSets.Add(new FeeAdjustedPayoutSet(
+                    address: payoutSet.Address,
+                    feeAdjustedAmount: (ulong)(payoutSet.Amount - perDestinationFeeShare),
+                    transactionFeeShare: perDestinationFeeShare,
+                    perPayoutTransactionFeeShare: perDestinationFeeShare / (ulong)payoutSet.Payouts.Count,
+                    payouts: payoutSet.Payouts
+                ));
+            }
+
+            return feeAdjustedPayoutSets;
+        }
+
+        private async Task SyncPayoutsToMatchingTransactionsAsync(LofiContext lofiContext, MoneroService moneroService, IEnumerable<FeeAdjustedPayoutSet> feeAdjustedPayoutSets, IEnumerable<string> transactionIds)
+        {
+            var transfers = await GetTransfersForTransactionIds(moneroService, transactionIds);
+            var destinationAddressToTransfer = transfers
+                .SelectMany(transfer => transfer.Destinations.Select(destination => (Address: destination.Address, Transfer: transfer)))
+                .ToDictionary(x => x.Address, x => x.Transfer);
+
+            var now = DateTime.Now;
+            foreach (var payoutSet in feeAdjustedPayoutSets)
+            {
+                if (!destinationAddressToTransfer.TryGetValue(payoutSet.Address, out var transfer))
+                {
+                    continue;
+                }
+
+                foreach (var payout in payoutSet.Payouts)
+                {
+                    payout.Receipt = new TipPayoutReceipt
+                    {
+                        TipPayout = payout,
+                        NetPayoutAmount = payout.Amount! - payoutSet.PerPayoutTransactionFeeShare,
+                        PayoutTxFee = payoutSet.TransactionFeeShare,
+                        PayoutTxFeeShare = payoutSet.PerPayoutTransactionFeeShare,
+                        TransactionId = transfer.PaymentId,
+                        BlockHeight = transfer.Height == 0
+                            ? default
+                            : transfer.Height,
+                        WalletAddress = payoutSet.Address,
+                        PayoutTimestamp = transfer.Timestamp,
+                        CreatedDate = now,
+                        ModifiedDate = now
+                    };
+                }
+            }
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             using var scope = _serviceScopeFactory.CreateScope();
             var lofiContext = scope.ServiceProvider.GetRequiredService<LofiContext>();
@@ -95,129 +208,51 @@ namespace Lofi.API.Services
             {
                 try
                 {
-                    await moneroService.OpenWalletAsync(new OpenWalletRpcParameters(_lofiWalletFile, _lofiWalletPassword), cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var balance = await moneroService.GetBalance(new GetBalanceRpcParameters(0), cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
+                    await moneroService.OpenWalletAsync(new OpenWalletRpcParameters(_lofiWalletFile, _lofiWalletPassword), stoppingToken);
+                    var balance = await moneroService.GetBalance(new GetBalanceRpcParameters(0), stoppingToken);
+                    stoppingToken.ThrowIfCancellationRequested();
 
                     var unlockedBalance = balance.Result.UnlockedBalance;
-                    _logger.LogInformation($"Lofi wallet has a balance of {balance.Result.Balance} units of which {unlockedBalance} units are spendable for tip payouts");
                     if (unlockedBalance <= 0)
-                    { 
+                    {
                         _logger.LogInformation($"No funds in lofi wallet to payout tips");
                         continue;
                     }
-
-                    var pendingPayouts = await GetPendingPayoutsInOrderForAvailableFunds(lofiContext, unlockedBalance, cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
+                    
+                    _logger.LogInformation($"Lofi wallet has a balance of {balance.Result.Balance} units of which {unlockedBalance} units are spendable for tip payouts");
+                    var pendingPayouts = await GetPendingPayoutsInOrderForAvailableFundsAsync(lofiContext, unlockedBalance, stoppingToken);
+                    _logger.LogInformation($"There are ${pendingPayouts.Count} pending payouts to be paid out using the unlocked balance of {unlockedBalance} units");
+                    stoppingToken.ThrowIfCancellationRequested();
 
                     if (!pendingPayouts.Any()) continue;
 
-                    var payoutsByDestination = GroupPayoutsByDestination(pendingPayouts);
+                    var payoutSets = GroupPayoutsIntoSetsByWalletAddress(pendingPayouts).ToList();
+                    var feeAdjustedPayoutSets = await AdjustPayoutSetsToAccountForTransactionFeesAsync(moneroService, payoutSets, stoppingToken);
 
-                    foreach (var (address, amount, payouts) in payoutsByDestination)
-                    {
-                        var destinationArtistNames = string.Join(", ", payouts.Select(p => p.Artist.Name).Distinct());
-                        var destinationTipIds = string.Join(", ", payouts.Select(p => p.Tip.Id.ToString()));
-                        _logger.LogInformation($"Making payout of {amount} to wallet {address} for tip ids {destinationTipIds} on behalf of artists {destinationArtistNames}");
-                    }
-
-                    var estimatedSplitTransfer = await moneroService.SplitTransfer(new SplitTransferRpcParameters(
-                        destinations: payoutsByDestination.Select(payouts => new TransferRpcParameters.TransferDestination(
-                            amount: payouts.TotalAmount,
-                            address: payouts.Address
-                        )),
-                        doNotRelay: true
-                    ));
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var sharedTransactionFee = (ulong)estimatedSplitTransfer.Result.Fees.Sum(fee => (decimal)fee);
-                    var perDestinationFeeShare = (decimal)sharedTransactionFee / (decimal)payoutsByDestination.Count;
-
-                    var feeAdjustedPayoutsByDestination = payoutsByDestination
-                        .Select(payouts =>
-                        (
-                            Address: payouts.Address,
-                            FeeAdjustedAmount: (ulong)(payouts.TotalAmount - perDestinationFeeShare),
-                            TransactionFeeShare: sharedTransactionFee,
-                            PerPayoutTransactionFeeShare: sharedTransactionFee / (ulong)payouts.Payouts.Count,
-                            Payouts: payouts.Payouts
-                        ))
-                        .ToList();
-                    
-                    var splitTransfer = await moneroService.SplitTransfer(new SplitTransferRpcParameters(
-                        destinations: feeAdjustedPayoutsByDestination.Select(payouts => new TransferRpcParameters.TransferDestination(
-                            amount: payouts.FeeAdjustedAmount,
-                            address: payouts.Address
+                    var transfer = await moneroService.SplitTransfer(new SplitTransferRpcParameters(
+                        destinations: feeAdjustedPayoutSets.Select(payoutSet => new TransferRpcParameters.TransferDestination(
+                            amount: payoutSet.FeeAdjustedAmount,
+                            address: payoutSet.Address
                         )),
                         getTransactionHex: true,
                         getTransactionMetadata: true,
                         getTransactionKey: true
                     ));
+                    var transactionIds = transfer.Result.TransactionHashes;
 
-                    /* past this area must be atomic */
-
-                    var destinationAddressToTransfer = new Dictionary<string, GetTransferByTransactionIdRpcResult.GetTransferTransfer>();
-                    foreach (var transactionId in splitTransfer.Result.TransactionHashes)
-                    {
-                        var transfer = await moneroService.GetTransferByTransactionId(new GetTransferByTransactionIdRpcParameters(
-                            transactionId: transactionId
-                        ));
-                        foreach (var destination in transfer.Result.Transfer.Destinations)
-                        {
-                            destinationAddressToTransfer[destination.Address] = transfer.Result.Transfer;
-                        }
-                    }
-
-                    var now = DateTime.Now;
-                    foreach (var (address, feeAdjustedAmount, transactionFeeShare, perPayoutTransactionFeeShare, payouts) in feeAdjustedPayoutsByDestination)
-                    {
-                        if (!destinationAddressToTransfer.TryGetValue(address, out var transfer))
-                        {
-                            continue;
-                        }
-
-                        foreach (var payout in payouts)
-                        {
-                            payout.Receipt = new TipPayoutReceipt
-                            {
-                                TipPayout = payout,
-                                NetPayoutAmount = payout.Amount! - perPayoutTransactionFeeShare,
-                                PayoutTxFee = transactionFeeShare,
-                                PayoutTxFeeShare = perPayoutTransactionFeeShare,
-                                TransactionId = transfer.PaymentId,
-                                /* TODO(HH): the block height here won't be confirmed - perhaps genericise the payment conf service */
-                                /* a block height of 0 means that the payment hasn't been included in a block... yet! */
-                                BlockHeight = transfer.Height == 0
-                                    ? default
-                                    : transfer.Height,
-                                WalletAddress = address,
-                                PayoutTimestamp = transfer.Timestamp,
-                                CreatedDate = now,
-                                ModifiedDate = now
-                            };
-                        }
-                    }
-
-                    await lofiContext.SaveChangesAsync(cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
+                    await SyncPayoutsToMatchingTransactionsAsync(lofiContext, moneroService, feeAdjustedPayoutSets, transactionIds);
+                    await lofiContext.SaveChangesAsync();
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex.Message + "\n" + ex.StackTrace);
                 }
                 finally
-                {    
-                    await Task.Delay(TimeSpan.FromMilliseconds(1000), cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(1000), stoppingToken);
+                    stoppingToken.ThrowIfCancellationRequested();
                 }
             }
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("Tip Payout service shutting down");
-            return Task.CompletedTask;
         }
     }
 }
