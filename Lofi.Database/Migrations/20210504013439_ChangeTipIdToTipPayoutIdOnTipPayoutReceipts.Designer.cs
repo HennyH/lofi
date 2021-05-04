@@ -3,15 +3,17 @@ using System;
 using Lofi.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Lofi.Database.Migrations
 {
     [DbContext(typeof(LofiContext))]
-    partial class LofiContextModelSnapshot : ModelSnapshot
+    [Migration("20210504013439_ChangeTipIdToTipPayoutIdOnTipPayoutReceipts")]
+    partial class ChangeTipIdToTipPayoutIdOnTipPayoutReceipts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -552,13 +554,13 @@ namespace Lofi.Database.Migrations
                         .HasColumnName("wallet_address");
 
                     b.HasKey("Id")
-                        .HasName("pk_tip_payout_receipts");
+                        .HasName("pk_tip_payout_receipt");
 
                     b.HasIndex(new[] { "TipPayoutId" }, "UIX_TipPayoutReceipt_TipPayoutId")
                         .IsUnique()
-                        .HasDatabaseName("ix_tip_payout_receipts_tip_payout_id");
+                        .HasDatabaseName("ix_tip_payout_receipt_tip_payout_id");
 
-                    b.ToTable("tip_payout_receipts");
+                    b.ToTable("tip_payout_receipt");
                 });
 
             modelBuilder.Entity("AlbumArtist", b =>
@@ -784,7 +786,7 @@ namespace Lofi.Database.Migrations
                     b.HasOne("Lofi.API.Database.Entities.TipPayout", "TipPayout")
                         .WithOne("Receipt")
                         .HasForeignKey("Lofi.Database.Entities.TipPayoutReceipt", "TipPayoutId")
-                        .HasConstraintName("fk_tip_payout_receipts_tip_payouts_tip_payout_id")
+                        .HasConstraintName("fk_tip_payout_receipt_tip_payouts_tip_payout_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

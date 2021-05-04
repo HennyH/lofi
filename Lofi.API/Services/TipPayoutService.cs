@@ -7,6 +7,7 @@ using Lofi.API.Database.Entities;
 using Lofi.API.Models.MoneroRpc.Parameters;
 using Lofi.API.Models.MoneroRpc.Results;
 using Lofi.Database;
+using Lofi.Database.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,11 +21,11 @@ namespace Lofi.API.Services
         private const string DEFAULT_LOFI_WALLET_FILE = "testwallet";
         private const string DEFAULT_LOFI_WALLET_PASSWORD = "";
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly ILogger<TipPaymentConfirmationService> _logger;
+        private readonly ILogger<TipPayoutService> _logger;
         private readonly string _lofiWalletFile;
         private readonly string _lofiWalletPassword;
 
-        public TipPayoutService(ILogger<TipPaymentConfirmationService> logger, IServiceScopeFactory serviceScopeFactory, IConfiguration configuration)
+        public TipPayoutService(ILogger<TipPayoutService> logger, IServiceScopeFactory serviceScopeFactory, IConfiguration configuration)
         {
             this._logger = logger;
             this._serviceScopeFactory = serviceScopeFactory;
@@ -39,157 +40,49 @@ namespace Lofi.API.Services
             return Task.CompletedTask;
         }
 
-        private static async Task<IEnumerable<Tip>> GetTipsWithMissingPayoutsInPayoutOrderForAvailableFunds(LofiContext lofiContext, ulong availableFunds, CancellationToken cancellationToken = default)
+        private static async Task<IEnumerable<TipPayout>> GetPendingPayoutsInOrderForAvailableFunds(LofiContext lofiContext, ulong availableFunds, CancellationToken cancellationToken = default)
         {
-            var tipsWithMissingPayoutsInPayoutOrder = lofiContext.Tips
-                /* we only pay out tips which have been payed by the tipper! */
-                .Where(tip =>
-                    tip.Payment != null &&
-                    tip.Payment.BlockHeight.HasValue &&
-                    tip.Payment.Amount.HasValue &&
-                    tip.Payment.Amount > 0)
-                /* only look at tips where at least one artist hasn't recieved their
-                 * payout for whatever reason. Typically this will be because an
-                 * artist hasn't registerd their wallet address.
+            var orderedPendingPayoutsQuery =  lofiContext.TipPayouts
+                .AsQueryable()
+                /* payout records exist prior to being payed out (they initially record an intention
+                 * to pay out part of a tip), after they do get payed out they will not be in a
+                 * 'IsPending' state. Therefore we get the non-payed out payouts by filtering to
+                 * the payouts which _are_ pending.
                  */
-                .Where(tip => tip.Artists
-                    .Any(artist => !tip.Payouts
-                        .Any(p => p.ArtistId == artist.Id)))
-                /* pay out the tips starting from the oldest */
-                .OrderBy(tip => tip.Id)
-                .AsQueryable();
-            var x = lofiContext.Tips
-                /* we only pay out tips which have been payed by the tipper! */
-                .Where(tip =>
-                    tip.Payment != null &&
-                    tip.Payment.BlockHeight.HasValue &&
-                    tip.Payment.Amount.HasValue &&
-                    tip.Payment.Amount > 0)
-                .Include(tip => tip.Payment)
-                .Include(tip => tip.Artists)
-                .Include(tip => tip.Payouts)
-                .ToList(); 
-            return await tipsWithMissingPayoutsInPayoutOrder
-                .Select(tip => new
+                .Where(payout => payout.Receipt == null)
+                /* We can only pay out payouts if we know how much to pay out! This property is
+                 * set to be [Required] in the database model.
+                 */
+                .Where(payout => payout.Amount.HasValue)
+                /* payouts can only be paid out when the artist has a wallet address! */
+                .Where(payout => payout.Artist!.WalletAddress != null)
+                .OrderBy(payout => payout.Id);
+            return await orderedPendingPayoutsQuery
+                .Select(payout => new
                 {
-                    Tip = tip,
-                    RunningPayoutTotal = (ulong)tipsWithMissingPayoutsInPayoutOrder
-                        .Where(otherTip => otherTip.Id <= tip.Id)
-                        .Select(otherTip => new
-                        {
-                            TipAmount = otherTip.Payment!.Amount!.Value,
-                            /* we use the gross payout amount here b/c the original $tip amount / # artist$ did not account
-                             * for the transaction fee, and the transaction fees came from the pool of payout's
-                             * tips, meaning part of the tx fee came from the tip.
-                             */
-                            PayedOutAmount = otherTip.Payouts.Sum(p => (decimal)p.GrossPayoutAmount!.Value)
-                        })
-                        .Select(pay => pay.TipAmount - pay.PayedOutAmount)
-                        /* for whatever reason if we've payed out more than the tipper tipped then
-                         * abandon paying out any other artists associated with the tip.
-                         */
-                        .Where(remainingPayoutAmount => remainingPayoutAmount > 0)
-                        .Sum(remainingPayoutAmount => remainingPayoutAmount)
+                    Payout = payout,
+                    RunningGrossPayoutAmount = orderedPendingPayoutsQuery
+                        .Where(otherPayout => otherPayout.Id <= payout.Id)
+                        .Sum(otherPayout => otherPayout.Amount ?? 0m)
                 })
-                .Where(runningPayoutTip => runningPayoutTip.RunningPayoutTotal <= availableFunds)
-                .Select(runningPayoutTip => runningPayoutTip.Tip)
+                .Where(runningPayout => runningPayout.RunningGrossPayoutAmount <= availableFunds)
+                .Select(runningPayout => runningPayout.Payout)
+                .Include(payout => payout.Artist)
+                .Include(payout => payout.Tip)
                 .ToListAsync(cancellationToken);
         }
 
-        private static async Task<IEnumerable<(Tip Tip, Artist Artist, ulong Amount, string WalletAddress)>> GetArtistPayoutsForTips(LofiContext lofiContext, IEnumerable<Tip> tips, CancellationToken cancellationToken = default)
+        private static IReadOnlyList<(string Address, ulong TotalAmount, List<TipPayout> Payouts)> GroupPayoutsByDestination(IEnumerable<TipPayout> payouts)
         {
-            var tipIdToTip = tips.ToDictionary(tip => tip.Id);
-            var payedTipIds = tips
-                .Where(tip =>
-                    tip.Payment != null &&
-                    tip.Payment.Amount.HasValue &&
-                    tip.Payment.Amount > 0)
-                .Select(tip => tip.Id)
-                .ToArray();
-            var tipsToPayOut = await lofiContext.Tips
-                .FromSqlInterpolated(
-                    $@"
-                        SELECT
-                            tip.*
-                        FROM tips AS tip
-                        INNER JOIN artist_tip AS artist_tip
-                            ON artist_tip.tips_id = tip.id
-                        LEFT OUTER JOIN tip_payouts AS payout
-                            ON payout.tip_id = tip.id AND payout.artist_id = artist_tip.artists_id
-                        WHERE
-                            EXISTS
-                            (
-                                SELECT
-                                    *
-                                FROM tip_payments AS payment
-                                WHERE payment.tip_id = tip.id
-                            )
-                            AND tip.id = ANY ({payedTipIds})
-                    "
-                )
-                .Include(x => x.Payment)
-                .Include(x => x.Artists)
-                .Include(x => x.Payouts) 
-                .ToListAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            return tipsToPayOut
-                .Select(tip => new
+            return payouts
+                .GroupBy(payout => payout.Artist!.WalletAddress!)
+                .Select(g =>
                 {
-                    Tip = tip,
-                    TipAmount = tip.Payment!.Amount!.Value,
-                    AlreadyPayedOutAmount = tip.Payouts.Any()
-                        ? tip.Payouts.Sum(payout => payout.GrossPayoutAmount ?? 0m)
-                        : 0,
-                    ArtistsLeftToPayout = tip.Artists
-                        .Where(artist => !tip.Payouts.Any(payout => payout.ArtistId == artist.Id))
-                        .ToList()
+                    var artistsPayouts = g.ToList();
+                    var totalPayout = (ulong)artistsPayouts.Sum(p => p.Amount ?? 0m);
+                    return (g.Key, totalPayout, artistsPayouts);
                 })
-                .SelectMany(tip => tip.ArtistsLeftToPayout
-                    .Where(artist => artist.WalletAddress != null)
-                    .Select(artist =>
-                    (
-                        Tip: tip.Tip,
-                        Artist: artist,
-                        Amount: (ulong)Math.Floor((tip.TipAmount - tip.AlreadyPayedOutAmount) / tip.ArtistsLeftToPayout.Count),
-                        WalletAddress: artist.WalletAddress!
-                    )))
                 .ToList();
-        }
-
-        private static IEnumerable<(Tip Tip, Artist Artist, ulong GrossAmount, ulong TransactionFeeShare, ulong NetPayout, string Address)> AdjustPayoutsForSharedTransactionFee(
-                IEnumerable<(Tip Tip, Artist Artist, ulong Amount, string Address)> payouts,
-                ulong sharedTransactionFee
-            )
-        {
-            if (sharedTransactionFee <= 0) throw new ArgumentOutOfRangeException(nameof(sharedTransactionFee), "transaction fee must be greater than zero");
-
-            var numberOfUniquePayoutAddresses = (decimal)payouts
-                .Select(payout => payout.Address)
-                .Distinct()
-                .Count();
-            var perAddressShareOfTransactionFee = Convert.ToUInt64(Math.Ceiling((decimal)sharedTransactionFee / (decimal)numberOfUniquePayoutAddresses));
-            var addressToNumberOfPayouts = payouts
-                .GroupBy(payout => payout.Address)
-                .ToDictionary(g => g.Key, g => g.Count());
-            var feeAdjustedPayouts = new List<(Tip Tip, Artist Artist, ulong GrossAmount, ulong TransactionFeeShare, ulong NetAmount, string Address)>();
-            foreach (var payout in payouts)
-            {
-                if (!addressToNumberOfPayouts.TryGetValue(payout.Address, out var numberOfPayouts))
-                {
-                    continue;
-                }
-
-                var perPayoutShareOfSharedTransactionFee = Convert.ToUInt64(Math.Ceiling((decimal)perAddressShareOfTransactionFee / (decimal)numberOfPayouts));
-                var netPayoutAmount = payout.Amount - perPayoutShareOfSharedTransactionFee;
-                if (netPayoutAmount < 0)
-                {
-                    continue;
-                }
-
-                feeAdjustedPayouts.Add((payout.Tip, payout.Artist, payout.Amount, perPayoutShareOfSharedTransactionFee, netPayoutAmount, payout.Address));
-            }
-
-            return feeAdjustedPayouts;
         }
 
         public async Task PayoutTips(CancellationToken cancellationToken)
@@ -216,95 +109,94 @@ namespace Lofi.API.Services
                         continue;
                     }
 
-                    var tipsWithMissingPayouts = await GetTipsWithMissingPayoutsInPayoutOrderForAvailableFunds(lofiContext, unlockedBalance, cancellationToken);
+                    var pendingPayouts = await GetPendingPayoutsInOrderForAvailableFunds(lofiContext, unlockedBalance, cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    var nonFeeAdjustedPayouts = await GetArtistPayoutsForTips(lofiContext, tipsWithMissingPayouts, cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!pendingPayouts.Any()) continue;
 
-                    if (!nonFeeAdjustedPayouts.Any()) continue;
+                    var payoutsByDestination = GroupPayoutsByDestination(pendingPayouts);
 
-                    /* (address, amount) => [payouts] */
-                    var destinationToPayouts = nonFeeAdjustedPayouts
-                        .GroupBy(payout => payout.WalletAddress)
-                        .Select(g => new { WalletAddress = g.Key, Payouts = g.ToList() })
-                        .ToDictionary(
-                            g => new TransferRpcParameters.TransferDestination(
-                                amount: (ulong)g.Payouts.Sum(p => (decimal)p.Amount),
-                                address: g.WalletAddress),
-                            g => g.Payouts);
-
-                    foreach (var (destination, payouts) in destinationToPayouts)
+                    foreach (var (address, amount, payouts) in payoutsByDestination)
                     {
-                        var destinationArtistNames = string.Join(", ", payouts.Select(p => p.Artist.Name));
+                        var destinationArtistNames = string.Join(", ", payouts.Select(p => p.Artist.Name).Distinct());
                         var destinationTipIds = string.Join(", ", payouts.Select(p => p.Tip.Id.ToString()));
-                        _logger.LogInformation($"Making payout of {destination.Amount} to wallet {destination.Address} for tip ids {destinationTipIds} on behalf of artists {destinationArtistNames}");
+                        _logger.LogInformation($"Making payout of {amount} to wallet {address} for tip ids {destinationTipIds} on behalf of artists {destinationArtistNames}");
                     }
 
                     var estimatedSplitTransfer = await moneroService.SplitTransfer(new SplitTransferRpcParameters(
-                        destinations: destinationToPayouts.Keys,
+                        destinations: payoutsByDestination.Select(payouts => new TransferRpcParameters.TransferDestination(
+                            amount: payouts.TotalAmount,
+                            address: payouts.Address
+                        )),
                         doNotRelay: true
                     ));
-                    var sharedTransactionFee = (ulong)estimatedSplitTransfer.Result.Fees.Sum(fee => (decimal)fee);
                     cancellationToken.ThrowIfCancellationRequested();
+                    var sharedTransactionFee = (ulong)estimatedSplitTransfer.Result.Fees.Sum(fee => (decimal)fee);
+                    var perDestinationFeeShare = (decimal)sharedTransactionFee / (decimal)payoutsByDestination.Count;
 
-                    var feeAdjustedPayouts = AdjustPayoutsForSharedTransactionFee(nonFeeAdjustedPayouts, sharedTransactionFee);
-                    var destinations = feeAdjustedPayouts
-                        .GroupBy(payout => payout.Address)
-                        .Select(payoutsByAddress => new TransferRpcParameters.TransferDestination(
-                            address: payoutsByAddress.Key,
-                            amount: Convert.ToUInt64(payoutsByAddress.Sum(payout => (decimal)payout.NetPayout))))
+                    var feeAdjustedPayoutsByDestination = payoutsByDestination
+                        .Select(payouts =>
+                        (
+                            Address: payouts.Address,
+                            FeeAdjustedAmount: (ulong)(payouts.TotalAmount - perDestinationFeeShare),
+                            TransactionFeeShare: sharedTransactionFee,
+                            PerPayoutTransactionFeeShare: sharedTransactionFee / (ulong)payouts.Payouts.Count,
+                            Payouts: payouts.Payouts
+                        ))
                         .ToList();
+                    
                     var splitTransfer = await moneroService.SplitTransfer(new SplitTransferRpcParameters(
-                        destinations: destinations,
+                        destinations: feeAdjustedPayoutsByDestination.Select(payouts => new TransferRpcParameters.TransferDestination(
+                            amount: payouts.FeeAdjustedAmount,
+                            address: payouts.Address
+                        )),
                         getTransactionHex: true,
                         getTransactionMetadata: true,
                         getTransactionKey: true
                     ));
 
-                    var tipIds = feeAdjustedPayouts.Select(p => p.Tip.Id).ToArray();
-                    var tipIdToTip = await lofiContext.Tips
-                        .Where(t => tipIds.Contains(t.Id))
-                        .ToDictionaryAsync(t => t.Id, cancellationToken);
-                    var addressToTransfer = new Dictionary<string, GetTransferByTransactionIdRpcResult.GetTransferTransfer>();
-                    foreach (var txId in splitTransfer.Result.TransactionHashes)
+                    /* past this area must be atomic */
+
+                    var destinationAddressToTransfer = new Dictionary<string, GetTransferByTransactionIdRpcResult.GetTransferTransfer>();
+                    foreach (var transactionId in splitTransfer.Result.TransactionHashes)
                     {
                         var transfer = await moneroService.GetTransferByTransactionId(new GetTransferByTransactionIdRpcParameters(
-                            transactionId: txId
+                            transactionId: transactionId
                         ));
                         foreach (var destination in transfer.Result.Transfer.Destinations)
                         {
-                            addressToTransfer[destination.Address] = transfer.Result.Transfer;
+                            destinationAddressToTransfer[destination.Address] = transfer.Result.Transfer;
                         }
                     }
-                    cancellationToken.ThrowIfCancellationRequested();
-                    foreach (var payout in feeAdjustedPayouts)
+
+                    var now = DateTime.Now;
+                    foreach (var (address, feeAdjustedAmount, transactionFeeShare, perPayoutTransactionFeeShare, payouts) in feeAdjustedPayoutsByDestination)
                     {
-                        if (!tipIdToTip.TryGetValue(payout.Tip.Id, out var tip))
+                        if (!destinationAddressToTransfer.TryGetValue(address, out var transfer))
                         {
                             continue;
                         }
 
-                        if (!addressToTransfer.TryGetValue(payout.Address, out var transfer))
+                        foreach (var payout in payouts)
                         {
-                            continue;
+                            payout.Receipt = new TipPayoutReceipt
+                            {
+                                TipPayout = payout,
+                                NetPayoutAmount = payout.Amount! - perPayoutTransactionFeeShare,
+                                PayoutTxFee = transactionFeeShare,
+                                PayoutTxFeeShare = perPayoutTransactionFeeShare,
+                                TransactionId = transfer.PaymentId,
+                                /* TODO(HH): the block height here won't be confirmed - perhaps genericise the payment conf service */
+                                /* a block height of 0 means that the payment hasn't been included in a block... yet! */
+                                BlockHeight = transfer.Height == 0
+                                    ? default
+                                    : transfer.Height,
+                                WalletAddress = address,
+                                PayoutTimestamp = transfer.Timestamp,
+                                CreatedDate = now,
+                                ModifiedDate = now
+                            };
                         }
-
-                        var now = DateTime.Now;
-                        tip.Payouts.Add(new TipPayout
-                        {
-                            Tip = payout.Tip,
-                            Artist = payout.Artist,
-                            WalletAddress = payout.Address,
-                            TransactionId = transfer.TransactionId,
-                            Timestamp = transfer.Timestamp,
-                            GrossPayoutAmount = payout.GrossAmount,
-                            PayoutTxFee = sharedTransactionFee,
-                            PayoutTxFeeShare = payout.TransactionFeeShare,
-                            NetPayoutAmount = payout.NetPayout,
-                            CreatedDate = now,
-                            ModifiedDate = now
-                        });
                     }
 
                     await lofiContext.SaveChangesAsync(cancellationToken);

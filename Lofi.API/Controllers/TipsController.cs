@@ -45,6 +45,7 @@ namespace Lofi.API.Controllers
                 .Where(t => t.Id == tipId)
                 .Include(t => t.Payment)
                 .Include(t => t.Payouts)
+                    .ThenInclude(payout => payout.Receipt)
                 .FirstOrDefaultAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (tip == null) return new NotFoundObjectResult(tipId);
@@ -56,11 +57,11 @@ namespace Lofi.API.Controllers
                 IntegratedPaymentAddress = tip.IntegratedPaymentAddress,
                 PaymentTransactionId = tip.Payment?.TransactionId,
                 PaymentBlockHeight = tip.Payment?.BlockHeight,
-                PayoutAmount = tip.Payouts?.Any() == true
-                    ? (ulong?)(tip.Payouts?.Select(p => p.NetPayoutAmount)?.Sum(a => (decimal?)a ?? 0m))
+                PayoutAmount = tip.Payouts?.Where(p => p.Receipt != null)?.Any() == true
+                    ? (ulong?)(tip.Payouts?.Where(p => p.Receipt != null)?.Select(p => p.Receipt!.NetPayoutAmount)?.Sum(a => (decimal?)a ?? 0m))
                     : null,
-                PayoutTxFeeShare = tip.Payouts?.Any() == true
-                    ? (ulong)(tip.Payouts?.Select(p => p.PayoutTxFeeShare)?.Sum(a => (decimal?)a) ?? 0m)
+                PayoutTxFeeShare = tip.Payouts?.Where(p => p.Receipt != null)?.Any() == true
+                    ? (ulong)(tip.Payouts?.Where(p => p.Receipt != null)?.Select(p => p.Receipt!.NetPayoutAmount)?.Sum(a => (decimal?)a) ?? 0m)
                     : null
             });
         }

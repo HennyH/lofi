@@ -3,15 +3,17 @@ using System;
 using Lofi.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Lofi.Database.Migrations
 {
     [DbContext(typeof(LofiContext))]
-    partial class LofiContextModelSnapshot : ModelSnapshot
+    [Migration("20210504014520_AddTipPayoutReceiptsToContext")]
+    partial class AddTipPayoutReceiptsToContext
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

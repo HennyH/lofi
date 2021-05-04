@@ -3,15 +3,17 @@ using System;
 using Lofi.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Lofi.Database.Migrations
 {
     [DbContext(typeof(LofiContext))]
-    partial class LofiContextModelSnapshot : ModelSnapshot
+    [Migration("20210504011933_LetTransactionIdBeNullableOnTipPayout")]
+    partial class LetTransactionIdBeNullableOnTipPayout
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -364,29 +366,61 @@ namespace Lofi.Database.Migrations
                         .HasColumnName("id")
                         .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("numeric(20,0)")
-                        .HasColumnName("amount");
-
                     b.Property<int?>("ArtistId")
                         .IsRequired()
                         .HasColumnType("integer")
                         .HasColumnName("artist_id");
+
+                    b.Property<decimal?>("BlockHeight")
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("block_height");
 
                     b.Property<DateTime?>("CreatedDate")
                         .IsRequired()
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_date");
 
+                    b.Property<decimal>("GrossPayoutAmount")
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("gross_payout_amount");
+
                     b.Property<DateTime?>("ModifiedDate")
                         .IsRequired()
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("modified_date");
 
+                    b.Property<decimal?>("NetPayoutAmount")
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("net_payout_amount");
+
+                    b.Property<DateTime?>("PayoutDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("payout_date");
+
+                    b.Property<decimal?>("PayoutTimestamp")
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("payout_timestamp");
+
+                    b.Property<decimal?>("PayoutTxFee")
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("payout_tx_fee");
+
+                    b.Property<decimal?>("PayoutTxFeeShare")
+                        .HasColumnType("numeric(20,0)")
+                        .HasColumnName("payout_tx_fee_share");
+
                     b.Property<int?>("TipId")
                         .IsRequired()
                         .HasColumnType("integer")
                         .HasColumnName("tip_id");
+
+                    b.Property<string>("TransactionId")
+                        .HasColumnType("text")
+                        .HasColumnName("transaction_id");
+
+                    b.Property<string>("WalletAddress")
+                        .HasColumnType("text")
+                        .HasColumnName("wallet_address");
 
                     b.HasKey("Id")
                         .HasName("pk_tip_payouts");
@@ -496,69 +530,6 @@ namespace Lofi.Database.Migrations
                         .HasName("pk_uploaded_files");
 
                     b.ToTable("uploaded_files");
-                });
-
-            modelBuilder.Entity("Lofi.Database.Entities.TipPayoutReceipt", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id")
-                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
-
-                    b.Property<decimal?>("BlockHeight")
-                        .HasColumnType("numeric(20,0)")
-                        .HasColumnName("block_height");
-
-                    b.Property<DateTime?>("CreatedDate")
-                        .IsRequired()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_date");
-
-                    b.Property<DateTime?>("ModifiedDate")
-                        .IsRequired()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("modified_date");
-
-                    b.Property<decimal>("NetPayoutAmount")
-                        .HasColumnType("numeric(20,0)")
-                        .HasColumnName("net_payout_amount");
-
-                    b.Property<decimal>("PayoutTimestamp")
-                        .HasColumnType("numeric(20,0)")
-                        .HasColumnName("payout_timestamp");
-
-                    b.Property<decimal>("PayoutTxFee")
-                        .HasColumnType("numeric(20,0)")
-                        .HasColumnName("payout_tx_fee");
-
-                    b.Property<decimal>("PayoutTxFeeShare")
-                        .HasColumnType("numeric(20,0)")
-                        .HasColumnName("payout_tx_fee_share");
-
-                    b.Property<int?>("TipPayoutId")
-                        .IsRequired()
-                        .HasColumnType("integer")
-                        .HasColumnName("tip_payout_id");
-
-                    b.Property<string>("TransactionId")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("transaction_id");
-
-                    b.Property<string>("WalletAddress")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("wallet_address");
-
-                    b.HasKey("Id")
-                        .HasName("pk_tip_payout_receipts");
-
-                    b.HasIndex(new[] { "TipPayoutId" }, "UIX_TipPayoutReceipt_TipPayoutId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_tip_payout_receipts_tip_payout_id");
-
-                    b.ToTable("tip_payout_receipts");
                 });
 
             modelBuilder.Entity("AlbumArtist", b =>
@@ -779,18 +750,6 @@ namespace Lofi.Database.Migrations
                     b.Navigation("CoverPhotoFile");
                 });
 
-            modelBuilder.Entity("Lofi.Database.Entities.TipPayoutReceipt", b =>
-                {
-                    b.HasOne("Lofi.API.Database.Entities.TipPayout", "TipPayout")
-                        .WithOne("Receipt")
-                        .HasForeignKey("Lofi.Database.Entities.TipPayoutReceipt", "TipPayoutId")
-                        .HasConstraintName("fk_tip_payout_receipts_tip_payouts_tip_payout_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("TipPayout");
-                });
-
             modelBuilder.Entity("Lofi.API.Database.Entities.Album", b =>
                 {
                     b.Navigation("Tracks");
@@ -801,11 +760,6 @@ namespace Lofi.Database.Migrations
                     b.Navigation("Payment");
 
                     b.Navigation("Payouts");
-                });
-
-            modelBuilder.Entity("Lofi.API.Database.Entities.TipPayout", b =>
-                {
-                    b.Navigation("Receipt");
                 });
 #pragma warning restore 612, 618
         }

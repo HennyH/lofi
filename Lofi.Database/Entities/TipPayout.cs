@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using Lofi.Database.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lofi.API.Database.Entities
@@ -17,20 +18,9 @@ namespace Lofi.API.Database.Entities
         public Artist? Artist { get; set; }
         [Required]
         public int? ArtistId { get; set; }
-        public string? WalletAddress { get; set; }
         [Required]
-        public string? TransactionId { get; set; }
-        public ulong? BlockHeight { get; set; }
-        [Required]
-        public ulong? Timestamp { get; set; }
-        [Required]
-        public ulong? GrossPayoutAmount { get; set; }
-        [Required]
-        public ulong? NetPayoutAmount { get; set; }
-        [Required]
-        public ulong? PayoutTxFee { get; set; }
-        [Required]
-        public ulong? PayoutTxFeeShare { get; set; }
+        public ulong? Amount { get; set; }
+        public TipPayoutReceipt? Receipt {get;set;}
         [Required]
         public DateTime? CreatedDate { get; set; }
         [Required]

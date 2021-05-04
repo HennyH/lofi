@@ -195,15 +195,15 @@ namespace Lofi.API.Models.MoneroRpc.Results
         }
 
         [JsonPropertyName("in")]
-        public IEnumerable<Transfer> InTransfers { get; set; }
+        public IEnumerable<Transfer>? InTransfers { get; set; }
         [JsonPropertyName("out")]
-        public IEnumerable<Transfer> OutTransfers { get; set; }
+        public IEnumerable<Transfer>? OutTransfers { get; set; }
         [JsonPropertyName("pending")]
-        public IEnumerable<Transfer> PendingTransfers { get; set; }
+        public IEnumerable<Transfer>? PendingTransfers { get; set; }
         [JsonPropertyName("failed")]
-        public IEnumerable<Transfer> FailedTransfers { get; set; }
+        public IEnumerable<Transfer>? FailedTransfers { get; set; }
         [JsonPropertyName("pool")]
-        public IEnumerable<Transfer> PoolTransfers { get; set; }
+        public IEnumerable<Transfer>? PoolTransfers { get; set; }
 
         public class Transfer
         {

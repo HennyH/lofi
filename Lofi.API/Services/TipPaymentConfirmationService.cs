@@ -50,63 +50,91 @@ namespace Lofi.API.Services
                 .OrderByDescending(h => h)
                 .FirstOrDefaultAsync(cancellationToken)
                 ?? 1;
-            while (true)
+            try
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-
-                _logger.LogInformation($"Searching for incoming tip transfers from block height {currentBlockHeight}");
-                await moneroService.OpenWalletAsync(new OpenWalletRpcParameters(_lofiWalletFile, _lofiWalletPassword), cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-                var transfers = await moneroService.GetTransfers(new GetTransfersRpcParameters
+                while (true)
                 {
-                    In = true,
-                    FilterByHeight = true,
-                    MinHeight = currentBlockHeight
-                }, cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-                _logger.LogInformation($"Found {transfers.Result.InTransfers.Count()} incoming transfers to lofi wallet");
+                    await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                // TODO(HH): payment id's get reused past ushort.MaxValue so we need logic
-                // here which correctly assocaites a transfer to it's tip despite the
-                // payment ids not being unique.
-                var paymentIdToTransfer = transfers.Result.InTransfers
-                    .GroupBy(t => Convert.ToUInt16(t.PaymentId, 16))
-                    .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.Timestamp).First());
-                var paymentIds = paymentIdToTransfer.Select(g => g.Key).ToArray();
-                _logger.LogInformation($"Looking for unpaid tips with payment ids: {(string.Join(", ", paymentIds.Select(i => i.ToString())))}");
-                var tips = await lofiContext.Tips
-                    .Where(t => t.Payment == null && t.PaymentId.HasValue && paymentIds.Contains(t.PaymentId.Value))
-                    .ToListAsync(cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (!tips.Any())
-                {
-                    continue;
-                } 
-
-                foreach (var tip in tips)
-                {
-                    var transfer = paymentIdToTransfer[tip.PaymentId!.Value];
-                    var now = DateTime.Now;
-                    tip.Payment = new TipPayment
+                    _logger.LogInformation($"Searching for incoming tip transfers from block height {currentBlockHeight}");
+                    await moneroService.OpenWalletAsync(new OpenWalletRpcParameters(_lofiWalletFile, _lofiWalletPassword), cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var transfers = await moneroService.GetTransfers(new GetTransfersRpcParameters
                     {
-                        BlockHeight = transfer.Height,
-                        Amount = transfer.Amount,
-                        TransactionId = transfer.TransactionId,
-                        Timestamp = transfer.Timestamp,
-                        Tip = tip,
-                        CreatedDate = now,
-                        ModifiedDate = now,
-                    };
-                    _logger.LogInformation($"Matched tip id {tip.Id} with payment id {tip.PaymentId} ({tip.Payment.Amount} units) to transfer with txid {tip.Payment.TransactionId} at height {transfer.Height}");
+                        In = true,
+                        // TODO(HH): When searching by height it looks like we only search
+                        // for confirmed transactions which is problematic since we're happy to accept 0conf.
+                        // waiting for blocks makes the tests unreliable.
+                        // FilterByHeight = true,
+                        // MinHeight = currentBlockHeight
+                    }, cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (transfers.Result.InTransfers == null || !transfers.Result.InTransfers.Any())
+                    {
+                        _logger.LogInformation($"Found no incoming transfers to lofi wallet");
+                        continue;
+                    }
+                    _logger.LogInformation($"Found {transfers.Result.InTransfers.Count()} incoming transfers to lofi wallet");
+
+                    // TODO(HH): payment id's get reused past ushort.MaxValue so we need logic
+                    // here which correctly assocaites a transfer to it's tip despite the
+                    // payment ids not being unique.
+                    var paymentIdToTransfer = transfers.Result.InTransfers
+                        .GroupBy(t => Convert.ToUInt16(t.PaymentId, 16))
+                        .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.Timestamp).First());
+                    var paymentIds = paymentIdToTransfer.Select(g => g.Key).ToArray();
+                    _logger.LogInformation($"Looking for unpaid tips with payment ids: {(string.Join(", ", paymentIds.Select(i => i.ToString())))}");
+                    var tips = await lofiContext.Tips
+                        .Where(t => t.Payment == null && t.PaymentId.HasValue && paymentIds.Contains(t.PaymentId.Value))
+                        .Include(t => t.Track)
+                            .ThenInclude(t => t.Artists)
+                        .ToListAsync(cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (!tips.Any())
+                    {
+                        continue;
+                    } 
+
+                    foreach (var tip in tips)
+                    {
+                        var transfer = paymentIdToTransfer[tip.PaymentId!.Value];
+                        var now = DateTime.Now;
+                        tip.Payment = new TipPayment
+                        {
+                            BlockHeight = transfer.Height,
+                            Amount = transfer.Amount,
+                            TransactionId = transfer.TransactionId,
+                            Timestamp = transfer.Timestamp,
+                            Tip = tip,
+                            CreatedDate = now,
+                            ModifiedDate = now
+                        };
+                        tip.Payouts = tip.Track!.Artists
+                            .Select(artist => new TipPayout
+                            {
+                                Tip = tip,
+                                Artist = artist,
+                                Amount = (ulong)Math.Floor((decimal)transfer.Amount / (decimal)tip.Track.Artists.Count),
+                                CreatedDate = now,
+                                ModifiedDate = now
+                            })
+                            .ToList();
+                        _logger.LogInformation($"Matched tip id {tip.Id} with payment id {tip.PaymentId} ({tip.Payment.Amount} units) to transfer with txid {tip.Payment.TransactionId} at height {transfer.Height}");
+                    }
+
+                    currentBlockHeight = transfers.Result.InTransfers.Max(t => t.Height);
+                    _logger.LogInformation($"Incoming tip transfers up to {currentBlockHeight} have been synched");
+
+                    await lofiContext.SaveChangesAsync(cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
                 }
-
-                currentBlockHeight = transfers.Result.InTransfers.Max(t => t.Height);
-                _logger.LogInformation($"Incoming tip transfers up to {currentBlockHeight} have been synched");
-
-                await lofiContext.SaveChangesAsync(cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.Message + "\n" + ex.StackTrace);
             }
         }
 
