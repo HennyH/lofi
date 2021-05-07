@@ -174,16 +174,20 @@ namespace Lofi.API.Services
             }
 
             _logger.LogInformation($"Wallet {walletFilename} has a balance of {balance.Result.Balance} units of which {unlockedBalance} units are spendable for tip payouts");
-            var pendingPayouts = await GetPendingPayoutsInOrderForAvailableFundsAsync(lofiContext, unlockedBalance, stoppingToken);
-            _logger.LogInformation($"There are {pendingPayouts.Count} pending payouts to be paid out using the unlocked balance of {unlockedBalance} units");
+            var payouts = await GetPendingPayoutsInOrderForAvailableFundsAsync(lofiContext, unlockedBalance, stoppingToken);
+            _logger.LogInformation($"There are {payouts.Count} pending payouts which can be paid out using the unlocked balance of {unlockedBalance} units");
             stoppingToken.ThrowIfCancellationRequested();
 
-            if (!pendingPayouts.Any()) return;
+            if (!payouts.Any()) return;
 
-            var payoutSets = GroupPayoutsIntoSetsByWalletAddress(pendingPayouts).ToList();
+            var payoutSets = GroupPayoutsIntoSetsByWalletAddress(payouts).ToList();
             var feeAdjustedPayoutSets = await AdjustPayoutSetsToAccountForTransactionFeesAsync(moneroService, payoutSets, stoppingToken);
 
-            var transfer = await moneroService.SplitTransfer(new SplitTransferRpcParameters(
+            // TODO(HH): We should probably actually do this as a doNotRelay: true, and then save the hex data to
+            // the the recipet entity, then have a seperate service send out the tx... maybe? The idea is that if
+            // after submitting the transfer we fail to record that fact we'll keep paying the same people out till
+            // the piggy bank has run dry!
+            var transferResponse = await moneroService.SplitTransfer(new SplitTransferRpcParameters(
                 destinations: feeAdjustedPayoutSets.Select(payoutSet => new TransferRpcParameters.TransferDestination(
                     amount: payoutSet.FeeAdjustedAmount,
                     address: payoutSet.Address
@@ -192,11 +196,16 @@ namespace Lofi.API.Services
                 getTransactionMetadata: true,
                 getTransactionKey: true
             ));
-            var transactionIds = transfer.Result.TransactionHashes;
+            if (transferResponse.Error != null)
+            {
+                _logger.LogError($"There was an error submitting the payout transfer: {transferResponse.Error.Code} - {transferResponse.Error.Message}");
+                return;
+            }
+            var transactionIds = transferResponse.Result.TransactionHashes;
 
             await SyncPayoutsToMatchingTransactionsAsync(lofiContext, moneroService, feeAdjustedPayoutSets, transactionIds);
             await lofiContext.SaveChangesAsync();
-            _logger.LogInformation($"Paid out {pendingPayouts.Count} tips using wallet {walletFilename}");
+            _logger.LogInformation($"Paid out {payouts.Count} tips using wallet {walletFilename}");
         }
 
         private async Task PayoutTips(TimeSpan? pause = null, DateTime? now = null, CancellationToken stoppingToken = default)

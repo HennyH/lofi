@@ -8,7 +8,6 @@ namespace Lofi.Database.Entities
         public int? Id { get; set; }
         [Required]
         public string? TransactionId { get; set; }
-        [Required]
         public string? FromWalletAddress { get; set; }
         [Required]
         public string? ToWalletAddress { get; set; }

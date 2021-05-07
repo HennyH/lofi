@@ -77,10 +77,15 @@ namespace Lofi.API.Services
                                 MoneroWalletRpcMethod.OPEN_WALLET,
                                 parameters: new RpcParameters.OpenWalletRpcParameters(filename: walletFilename, password: walletPassword ?? string.Empty)
                             );
-                            var openWalletHttpContent = openWalletRequest.AsHttpContent();
-                            using var openWalletHttpResponse = await _httpClient.PostAsync(_walletRpcUri, openWalletHttpContent, cancellationToken);
-                            var x = await openWalletHttpResponse.Content.ReadAsStringAsync();
+                            var openWalletRequestContent = openWalletRequest.AsHttpContent();
+                            using var openWalletHttpResponse = await _httpClient.PostAsync(_walletRpcUri, openWalletRequestContent, cancellationToken);
                             cancellationToken.ThrowIfCancellationRequested();
+                            var json = await openWalletHttpResponse.Content.ReadAsStringAsync();
+                            var response = JsonSerializer.Deserialize<MoneroRpcResponse<RpcResults.EmptyRpcResult>>(json);
+                            if (response == null || response.Error != null)
+                            {
+                                throw new Exception("Unable to open wallet");
+                            }
                         },
                         cancellationToken,
                         TaskContinuationOptions.None,

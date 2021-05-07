@@ -10,7 +10,6 @@ namespace Lofi.Database.Entities
     {
         [Key]
         public int Id { get; set; }
-        [Required]
         public ICollection<TipPayout> TipPayouts { get; set; } = new List<TipPayout>();
         [Required]
         public ulong? NetPayoutAmount { get; set; }

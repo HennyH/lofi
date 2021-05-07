@@ -123,33 +123,31 @@ namespace Lofi.API.Services
                 .Concat(getTransfersResponse.Result.PoolTransfers ?? Enumerable.Empty<GetTransfersRpcResult.Transfer>())
                 .ToList();
 
-            var transactionIdAndDestinationAddressToTransfer = transfers
+            var transactionFragmentToTransfer = transfers
                 .SelectMany(t => t.Destinations == null
-                    ? new[] { (t.TransactionId, t.Address, Transfer: t) }
-                    : t.Destinations.Select(d => (t.TransactionId, d.Address, Transfer: t)))
-                .ToDictionary(x => (x.TransactionId, x.Address), x => x.Transfer);
+                    ? new[] { (t.TransactionId, FromAddress: (string?)null, ToAddress: t.Address, Transfer: t) }
+                    : t.Destinations.Select(d => (t.TransactionId, FromAddress: (string?)walletAddress, ToAddress: d.Address, Transfer: t)))
+                .ToDictionary(x => (x.TransactionId, x.FromAddress, x.ToAddress), x => x.Transfer);
 
-            // TODO(HH): consider subaddress here...
-            var transferEntities = await lofiContext.Transfers
-                .Where(t => t.FromWalletAddress == walletAddress)
-                .ToListAsync(stoppingToken);
+            // TODO(HH): consider subaddress here... + optimize query
+            var transferEntities = await lofiContext.Transfers.ToListAsync(stoppingToken);
             stoppingToken.ThrowIfCancellationRequested();
-            var transactionIdAndDestinationAddressToTransferEntity = transferEntities
-                .ToDictionary(e => (e.TransactionId, e.ToWalletAddress), e => e);
+            var transactionFragmentToTransferEntity = transferEntities
+                .ToDictionary(e => (e.TransactionId, e.FromWalletAddress, e.ToWalletAddress), e => e);
 
-            foreach (var ((transactionId, destionAddress), transfer) in transactionIdAndDestinationAddressToTransfer)
+            foreach (var ((transactionId, fromAddress, toAddress), transfer) in transactionFragmentToTransfer)
             {
-                if (!transactionIdAndDestinationAddressToTransferEntity.TryGetValue((transactionId, destionAddress), out var entity))
+                if (!transactionFragmentToTransferEntity.TryGetValue((transactionId, fromAddress, toAddress), out var entity))
                 {
                     entity = new Transfer()
                     {
                         TransactionId = transactionId,
-                        FromWalletAddress = walletAddress,
-                        ToWalletAddress = destionAddress,
+                        FromWalletAddress = fromAddress,
+                        ToWalletAddress = toAddress,
                         CreatedDate = now,
                         ModifiedDate = now,
                         Amount = transfer.Amount,
-                        PaymentId = Convert.ToUInt16(transfer.PaymentId),
+                        PaymentId = Convert.ToUInt16(transfer.PaymentId, fromBase: 16),
                         Timestamp = transfer.Timestamp,
                         TransactionFee = transfer.Fee
                     };
