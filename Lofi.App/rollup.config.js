@@ -19,7 +19,7 @@ function serve() {
 	return {
 		writeBundle() {
 			if (server) return;
-			server = require('child_process').spawn('npm', ['run', 'start', '--', '--dev', '--port', '80', '--host', '0.0.0.0'], {
+			server = require('child_process').spawn('npm', ['run', 'start', '--', '--dev', '--port', '8010'], {
 				stdio: ['ignore', 'inherit', 'inherit'],
 				shell: true
 			});
@@ -40,7 +40,12 @@ export default {
 	},
 	plugins: [
 		svelte({
-			preprocess: sveltePreprocess({ sourceMap: !production }),
+			preprocess: sveltePreprocess({
+				sourceMap: !production,
+				scss: {
+					includePaths: ['src', 'node_modules']
+				}
+			}),
 			compilerOptions: {
 				// enable run-time checks when not in production
 				dev: !production

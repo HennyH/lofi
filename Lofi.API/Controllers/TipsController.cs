@@ -43,9 +43,11 @@ namespace Lofi.API.Controllers
         {
             var tip = await _lofiContext.Tips
                 .Where(t => t.Id == tipId)
-                .Include(t => t.Payment)
-                .Include(t => t.Payouts)
-                    .ThenInclude(payout => payout.Receipt)
+                .Include(t => t.Payments)
+                    .ThenInclude(t => t.Payouts)
+                        .ThenInclude(payout => payout.Receipt)
+                .Include(t => t.Payments)
+                    .ThenInclude(p => p.PaymentTransfer)
                 .FirstOrDefaultAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (tip == null) return new NotFoundObjectResult(tipId);
@@ -53,16 +55,17 @@ namespace Lofi.API.Controllers
             {
                 TipId = tip.Id,
                 TipMessage = tip.Message,
-                TipAmount = tip.Payment?.Amount,
+                TipAmount = tip.Payments.Any()
+                    ? (ulong)tip.Payments.Sum(payment => (decimal)payment.PaymentTransfer!.Amount.GetValueOrDefault())
+                    : 0,
                 IntegratedPaymentAddress = tip.IntegratedPaymentAddress,
-                PaymentTransactionId = tip.Payment?.TransactionId,
-                PaymentBlockHeight = tip.Payment?.BlockHeight,
-                PayoutAmount = tip.Payouts?.Where(p => p.Receipt != null)?.Any() == true
-                    ? (ulong?)(tip.Payouts?.Where(p => p.Receipt != null)?.Select(p => p.Receipt!.NetPayoutAmount)?.Sum(a => (decimal?)a ?? 0m))
-                    : null,
-                PayoutTxFeeShare = tip.Payouts?.Where(p => p.Receipt != null)?.Any() == true
-                    ? (ulong)(tip.Payouts?.Where(p => p.Receipt != null)?.Select(p => p.Receipt!.NetPayoutAmount)?.Sum(a => (decimal?)a) ?? 0m)
-                    : null
+                // PaymentBlockHeight = tip.Payment?.BlockHeight,
+                // PayoutAmount = tip.Payouts?.Where(p => p.Receipt != null)?.Any() == true
+                //     ? (ulong?)(tip.Payouts?.Where(p => p.Receipt != null)?.Select(p => p.Receipt!.NetPayoutAmount)?.Sum(a => (decimal?)a ?? 0m))
+                //     : null,
+                // PayoutTxFeeShare = tip.Payouts?.Where(p => p.Receipt != null)?.Any() == true
+                //     ? (ulong)(tip.Payouts?.Where(p => p.Receipt != null)?.Select(p => p.Receipt!.NetPayoutAmount)?.Sum(a => (decimal?)a) ?? 0m)
+                //     : null
             });
         }
 

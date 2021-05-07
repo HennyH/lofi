@@ -20,8 +20,7 @@ namespace Lofi.API.Database.Entities
         public ICollection<Artist> Artists { get; set; } = new List<Artist>();
         [Required]
         public string? IntegratedPaymentAddress { get; set; }
-        public TipPayment? Payment { get; set; }
-        public ICollection<TipPayout> Payouts { get; set; } = new List<TipPayout>();
+        public ICollection<TipPayment> Payments { get; set; } = new List<TipPayment>();
         [Required]
         public DateTime? CreatedDate { get; set; }
         [Required]

@@ -117,119 +117,197 @@ namespace Lofi.API.Services
             }
         }
 
-        public async Task<MoneroRpcResponse<RpcResults.EmptyRpcResult>> OpenWalletAsync(RpcParameters.OpenWalletRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.EmptyRpcResult>> OpenWalletAsync(
+                RpcParameters.OpenWalletRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.OpenWalletRpcParameters, RpcResults.EmptyRpcResult>(
                 MoneroWalletRpcMethod.OPEN_WALLET,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }
 
-        public async Task<MoneroRpcResponse<RpcResults.MakeIntegratedAddressRpcResult>> MakeIntegratedAddressAsync(RpcParameters.MakeIntegratedAddressRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.MakeIntegratedAddressRpcResult>> MakeIntegratedAddressAsync(
+                RpcParameters.MakeIntegratedAddressRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.MakeIntegratedAddressRpcParameters, RpcResults.MakeIntegratedAddressRpcResult>(
                 MoneroWalletRpcMethod.MAKE_INTEGRATED_ADDRESS,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }
 
-        public async Task<MoneroRpcResponse<RpcResults.MakeUriRpcResult>> MakeUri(RpcParameters.MakeUriRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.MakeUriRpcResult>> MakeUri(
+                RpcParameters.MakeUriRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.MakeUriRpcParameters, RpcResults.MakeUriRpcResult>(
                 MoneroWalletRpcMethod.MAKE_URI,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }
 
-        public async Task<MoneroRpcResponse<RpcResults.GetAccountsRpcResult>> GetAccounts(RpcParameters.GetAccountsRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.GetAccountsRpcResult>> GetAccounts(
+                RpcParameters.GetAccountsRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.GetAccountsRpcParameters, RpcResults.GetAccountsRpcResult>(
                 MoneroWalletRpcMethod.GET_ACCOUNTS,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }
 
-        public async Task<MoneroRpcResponse<RpcResults.GetAddressRpcResult>> GetAddress(RpcParameters.GetAddressRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.GetAddressRpcResult>> GetAddress(
+                RpcParameters.GetAddressRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.GetAddressRpcParameters, RpcResults.GetAddressRpcResult>(
                 MoneroWalletRpcMethod.GET_ADDRESS,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }
 
-        public async Task<MoneroRpcResponse<RpcResults.GetPaymentsRpcResult>> GetPayments(RpcParameters.GetPaymentsRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.GetPaymentsRpcResult>> GetPayments(
+                RpcParameters.GetPaymentsRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.GetPaymentsRpcParameters, RpcResults.GetPaymentsRpcResult>(
                 MoneroWalletRpcMethod.GET_PAYMENTS,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }
 
-        public async Task<MoneroRpcResponse<RpcResults.GetTransfersRpcResult>> GetTransfers(RpcParameters.GetTransfersRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.GetTransfersRpcResult>> GetTransfers(
+                RpcParameters.GetTransfersRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.GetTransfersRpcParameters, RpcResults.GetTransfersRpcResult>(
                 MoneroWalletRpcMethod.GET_TRANSFERS,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }
 
-        public async Task<MoneroRpcResponse<RpcResults.GetBalanceRpcResult>> GetBalance(RpcParameters.GetBalanceRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.GetBalanceRpcResult>> GetBalance(
+                RpcParameters.GetBalanceRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.GetBalanceRpcParameters, RpcResults.GetBalanceRpcResult>(
                 MoneroWalletRpcMethod.GET_BALANCE,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }
 
-        public async Task<MoneroRpcResponse<RpcResults.TransferRpcResult>> Transfer(RpcParameters.TransferRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.TransferRpcResult>> Transfer(
+                RpcParameters.TransferRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.TransferRpcParameters, RpcResults.TransferRpcResult>(
                 MoneroWalletRpcMethod.TRANSFER,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }
 
-        public async Task<MoneroRpcResponse<RpcResults.SplitTransferRpcResult>> SplitTransfer(RpcParameters.SplitTransferRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.SplitTransferRpcResult>> SplitTransfer(
+                RpcParameters.SplitTransferRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.SplitTransferRpcParameters, RpcResults.SplitTransferRpcResult>(
                 MoneroWalletRpcMethod.SPLIT_TRANSFER,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }
         
-        public async Task<MoneroRpcResponse<RpcResults.DescribeTransferRpcResult>> DescribeTransfer(RpcParameters.DescribeTransferRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.DescribeTransferRpcResult>> DescribeTransfer(
+                RpcParameters.DescribeTransferRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.DescribeTransferRpcParameters, RpcResults.DescribeTransferRpcResult>(
                 MoneroWalletRpcMethod.DESCRIBE_TRANSFER,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }
 
-        public async Task<MoneroRpcResponse<RpcResults.SubmitTransferRpcResult>> SubmitTransfer(RpcParameters.SubmitTransferRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.SubmitTransferRpcResult>> SubmitTransfer(
+                RpcParameters.SubmitTransferRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.SubmitTransferRpcParameters, RpcResults.SubmitTransferRpcResult>(
                 MoneroWalletRpcMethod.SUBMIT_TRANSFER,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }
 
-        public async Task<MoneroRpcResponse<RpcResults.GetTransferByTransactionIdRpcResult>> GetTransferByTransactionId(RpcParameters.GetTransferByTransactionIdRpcParameters parameters, CancellationToken cancellationToken = default)
+        public async Task<MoneroRpcResponse<RpcResults.GetTransferByTransactionIdRpcResult>> GetTransferByTransactionId(
+                RpcParameters.GetTransferByTransactionIdRpcParameters parameters,
+                string? walletFilename = null,
+                string? walletPassword = null,
+                CancellationToken cancellationToken = default)
         {
             return await PerformWalletRpc<RpcParameters.GetTransferByTransactionIdRpcParameters, RpcResults.GetTransferByTransactionIdRpcResult>(
                 MoneroWalletRpcMethod.GET_TRANSFER_BY_TXID,
                 parameters,
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
                 cancellationToken: cancellationToken
             );
         }

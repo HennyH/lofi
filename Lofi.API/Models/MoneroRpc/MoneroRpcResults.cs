@@ -223,7 +223,9 @@ namespace Lofi.API.Models.MoneroRpc.Results
                     ulong timestamp,
                     string transactionId,
                     string transferType,
-                    ulong unlockTime
+                    ulong unlockTime,
+                    ulong[]? amounts,
+                    IEnumerable<Destination>? destinations
                 )
             {
                 this.Address = address;
@@ -240,12 +242,17 @@ namespace Lofi.API.Models.MoneroRpc.Results
                 this.TransactionId = transactionId;
                 this.TransferType = transferType;
                 this.UnlockTime = unlockTime;
+                this.Amounts = amounts;
+                this.Destinations = destinations;
             }
 
             [JsonPropertyName("address")]
             public string Address { get; set; }
             [JsonPropertyName("amount")]
             public ulong Amount { get; set; }
+            [JsonPropertyName("amounts")]
+            public ulong[]? Amounts { get; set; }
+            public IEnumerable<Destination>? Destinations { get; set; }
             [JsonPropertyName("confirmations")]
             public ulong Confirmations { get; set; }
             [JsonPropertyName("double_spend_seen")]
@@ -584,19 +591,19 @@ namespace Lofi.API.Models.MoneroRpc.Results
             [JsonPropertyName("unlock_time")]
             public ulong UnlockTime { get; set; }
         }
+    }
 
-        public class Destination
+    public class Destination
+    {
+        public Destination(ulong amount, string address)
         {
-            public Destination(ulong amount, string address)
-            {
-                this.Amount = amount;
-                this.Address = address;
-            }
-
-            [JsonPropertyName("amount")]
-            public ulong Amount { get; set; }
-            [JsonPropertyName("address")]
-            public string Address { get; set; }
+            this.Amount = amount;
+            this.Address = address;
         }
+
+        [JsonPropertyName("amount")]
+        public ulong Amount { get; set; }
+        [JsonPropertyName("address")]
+        public string Address { get; set; }
     }
 }

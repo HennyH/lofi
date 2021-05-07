@@ -23,6 +23,8 @@ namespace Lofi.API.Tests
         protected readonly ApiWebApplicationFactory _factory;
         protected readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         protected readonly ITestOutputHelper _output;
+        protected readonly string ARTIST_WALLET = "lofiartist-test";
+        protected readonly string SERVER_WALLET = "lofiserver-test";
 
         public ApiTestFixture(ITestOutputHelper outputHelper, ApiWebApplicationFactory factory)
         {

@@ -17,3 +17,8 @@ Local music discovery and playback with Monero payments.
 |LOFI_MONERO_WALLER_RPC_PORT||28083|
 |LOFI_PG_DATA_DIR|Configures where the PostgreSQL database files will be stored|`~/pg`|
 |LOFI_MUSIC_DIRECTORY|Configures where uploaded music will be stored|`~/music`|
+
+1. [walletAddress, ...transfer] <- continually synch transfers into db
+2. match up transfers to tips (don't reuse paymentids for now)
+3. when doing a payout record the walletAddress being sent from
+4. create new test / dev wallets + throw if not set

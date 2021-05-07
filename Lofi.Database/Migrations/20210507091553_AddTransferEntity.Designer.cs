@@ -3,15 +3,17 @@ using System;
 using Lofi.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Lofi.Database.Migrations
 {
     [DbContext(typeof(LofiContext))]
-    partial class LofiContextModelSnapshot : ModelSnapshot
+    [Migration("20210507091553_AddTransferEntity")]
+    partial class AddTransferEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -341,6 +343,7 @@ namespace Lofi.Database.Migrations
                         .HasDatabaseName("ix_tip_payments_payment_transfer_id");
 
                     b.HasIndex("TipId")
+                        .IsUnique()
                         .HasDatabaseName("ix_tip_payments_tip_id");
 
                     b.ToTable("tip_payments");
@@ -373,14 +376,10 @@ namespace Lofi.Database.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("modified_date");
 
-                    b.Property<int?>("ReceiptId")
-                        .HasColumnType("integer")
-                        .HasColumnName("receipt_id");
-
-                    b.Property<int?>("TipPaymentId")
+                    b.Property<int?>("TipId")
                         .IsRequired()
                         .HasColumnType("integer")
-                        .HasColumnName("tip_payment_id");
+                        .HasColumnName("tip_id");
 
                     b.HasKey("Id")
                         .HasName("pk_tip_payouts");
@@ -388,12 +387,9 @@ namespace Lofi.Database.Migrations
                     b.HasIndex("ArtistId")
                         .HasDatabaseName("ix_tip_payouts_artist_id");
 
-                    b.HasIndex("ReceiptId")
-                        .HasDatabaseName("ix_tip_payouts_receipt_id");
-
-                    b.HasIndex(new[] { "TipPaymentId", "ArtistId" }, "UIX_TipPayount_TipPayment_Artist")
+                    b.HasIndex(new[] { "TipId", "ArtistId" }, "UIX_TipPayount_Tip_Artist")
                         .IsUnique()
-                        .HasDatabaseName("ix_tip_payouts_tip_payment_id_artist_id");
+                        .HasDatabaseName("ix_tip_payouts_tip_id_artist_id");
 
                     b.ToTable("tip_payouts");
                 });
@@ -517,6 +513,11 @@ namespace Lofi.Database.Migrations
                         .HasColumnType("numeric(20,0)")
                         .HasColumnName("net_payout_amount");
 
+                    b.Property<int?>("PayoutTransferId")
+                        .IsRequired()
+                        .HasColumnType("integer")
+                        .HasColumnName("payout_transfer_id");
+
                     b.Property<decimal>("PayoutTxFee")
                         .HasColumnType("numeric(20,0)")
                         .HasColumnName("payout_tx_fee");
@@ -525,13 +526,20 @@ namespace Lofi.Database.Migrations
                         .HasColumnType("numeric(20,0)")
                         .HasColumnName("payout_tx_fee_share");
 
-                    b.Property<string>("TransactionId")
+                    b.Property<int?>("TipPayoutId")
                         .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("transaction_id");
+                        .HasColumnType("integer")
+                        .HasColumnName("tip_payout_id");
 
                     b.HasKey("Id")
                         .HasName("pk_tip_payout_receipts");
+
+                    b.HasIndex("PayoutTransferId")
+                        .HasDatabaseName("ix_tip_payout_receipts_payout_transfer_id");
+
+                    b.HasIndex(new[] { "TipPayoutId" }, "UIX_TipPayoutReceipt_TipPayoutId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tip_payout_receipts_tip_payout_id");
 
                     b.ToTable("tip_payout_receipts");
                 });
@@ -764,8 +772,8 @@ namespace Lofi.Database.Migrations
                         .IsRequired();
 
                     b.HasOne("Lofi.API.Database.Entities.Tip", "Tip")
-                        .WithMany("Payments")
-                        .HasForeignKey("TipId")
+                        .WithOne("Payment")
+                        .HasForeignKey("Lofi.API.Database.Entities.TipPayment", "TipId")
                         .HasConstraintName("fk_tip_payments_tips_tip_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -784,23 +792,16 @@ namespace Lofi.Database.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Lofi.Database.Entities.TipPayoutReceipt", "Receipt")
-                        .WithMany("TipPayouts")
-                        .HasForeignKey("ReceiptId")
-                        .HasConstraintName("fk_tip_payouts_tip_payout_receipts_receipt_id");
-
-                    b.HasOne("Lofi.API.Database.Entities.TipPayment", "TipPayment")
+                    b.HasOne("Lofi.API.Database.Entities.Tip", "Tip")
                         .WithMany("Payouts")
-                        .HasForeignKey("TipPaymentId")
-                        .HasConstraintName("fk_tip_payouts_tip_payments_tip_payment_id")
+                        .HasForeignKey("TipId")
+                        .HasConstraintName("fk_tip_payouts_tips_tip_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Artist");
 
-                    b.Navigation("Receipt");
-
-                    b.Navigation("TipPayment");
+                    b.Navigation("Tip");
                 });
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Track", b =>
@@ -829,6 +830,27 @@ namespace Lofi.Database.Migrations
                     b.Navigation("CoverPhotoFile");
                 });
 
+            modelBuilder.Entity("Lofi.Database.Entities.TipPayoutReceipt", b =>
+                {
+                    b.HasOne("Lofi.Database.Entities.Transfer", "PayoutTransfer")
+                        .WithMany()
+                        .HasForeignKey("PayoutTransferId")
+                        .HasConstraintName("fk_tip_payout_receipts_transfers_payout_transfer_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lofi.API.Database.Entities.TipPayout", "TipPayout")
+                        .WithOne("Receipt")
+                        .HasForeignKey("Lofi.Database.Entities.TipPayoutReceipt", "TipPayoutId")
+                        .HasConstraintName("fk_tip_payout_receipts_tip_payouts_tip_payout_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PayoutTransfer");
+
+                    b.Navigation("TipPayout");
+                });
+
             modelBuilder.Entity("Lofi.API.Database.Entities.Album", b =>
                 {
                     b.Navigation("Tracks");
@@ -836,17 +858,14 @@ namespace Lofi.Database.Migrations
 
             modelBuilder.Entity("Lofi.API.Database.Entities.Tip", b =>
                 {
-                    b.Navigation("Payments");
-                });
+                    b.Navigation("Payment");
 
-            modelBuilder.Entity("Lofi.API.Database.Entities.TipPayment", b =>
-                {
                     b.Navigation("Payouts");
                 });
 
-            modelBuilder.Entity("Lofi.Database.Entities.TipPayoutReceipt", b =>
+            modelBuilder.Entity("Lofi.API.Database.Entities.TipPayout", b =>
                 {
-                    b.Navigation("TipPayouts");
+                    b.Navigation("Receipt");
                 });
 #pragma warning restore 612, 618
         }

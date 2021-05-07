@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,139 +15,147 @@ using Microsoft.Extensions.Logging;
 
 namespace Lofi.API.Services
 {
-    public class TipPaymentConfirmationService : IHostedService
+    public class TipPaymentConfirmationService : BackgroundService
     {
-        private const string DEFAULT_LOFI_WALLET_FILE = "testwallet";
-        private const string DEFAULT_LOFI_WALLET_PASSWORD = "";
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ILogger<TipPaymentConfirmationService> _logger;
-        private readonly string _lofiWalletFile;
-        private readonly string _lofiWalletPassword;
+        private readonly IEnumerable<Configuration.Wallet> _wallets;
         
 
-        public TipPaymentConfirmationService(ILogger<TipPaymentConfirmationService> logger, IServiceScopeFactory serviceScopeFactory, IConfiguration configuration)
+        public TipPaymentConfirmationService(
+                ILogger<TipPaymentConfirmationService> logger,
+                IServiceScopeFactory serviceScopeFactory,
+                IConfiguration configuration)
         {
             this._logger = logger;
             this._serviceScopeFactory = serviceScopeFactory;
-            this._lofiWalletFile = configuration.GetValue<string>("LOFI_WALLET_FILE", DEFAULT_LOFI_WALLET_FILE);
-            this._lofiWalletPassword = configuration.GetValue<string>("LOFI_WALLET_PASSWORD", DEFAULT_LOFI_WALLET_PASSWORD);
+            this._wallets = configuration.GetSection("Wallets").Get<List<Configuration.Wallet>>();
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
+        private async Task ScanForTipPaymentsInWallet(string walletFilename, string walletPassword, DateTime? now = null, CancellationToken stoppingToken = default)
         {
-            _logger.LogInformation("Tip Payment Confirmation service is running.");
-            UpdateTipStatuses(cancellationToken);
-            return Task.CompletedTask;
-        }
+            now ??= DateTime.Now;
 
-        public async Task UpdateTipStatuses(CancellationToken cancellationToken)
-        {
             using var scope = _serviceScopeFactory.CreateScope();
             var lofiContext = scope.ServiceProvider.GetRequiredService<LofiContext>();
             var moneroService = scope.ServiceProvider.GetRequiredService<MoneroService>();
 
-            ulong currentBlockHeight = await lofiContext.Tips
-                .Where(t => t.Payment != null && t.Payment.BlockHeight.HasValue)
-                .Select(t => (ulong?)t.Payment!.BlockHeight!.Value)
-                .OrderByDescending(h => h)
-                .FirstOrDefaultAsync(cancellationToken)
-                ?? 1;
-            try
+            var getAddressResponse = await moneroService.PerformWalletRpc<GetAddressRpcParameters, GetAddressRpcResult>(
+                MoneroWalletRpcMethod.GET_ADDRESS,
+                parameters: new GetAddressRpcParameters(0),
+                walletFilename: walletFilename,
+                walletPassword: walletPassword,
+                cancellationToken: stoppingToken
+            );
+            stoppingToken.ThrowIfCancellationRequested();
+            if (getAddressResponse.Error != null)
             {
-                while (true)
+                _logger.LogError($"While scanning for tip payments to wallet {walletFilename} I was unable to work out the wallets address. My wallet RPC request failed with the error: {getAddressResponse.Error.Code} - {getAddressResponse.Error.Message}");
+                _logger.LogError($"Aborting scanning for tip payments to wallet {walletFilename}");
+                return;
+            }
+            var walletAddress = getAddressResponse.Result.Address!;
+
+            var newTipPaymentTransfersToWallet = await lofiContext.Transfers
+                .Where(transfer => transfer.ToWalletAddress == walletAddress)
+                .Where(transfer => !lofiContext.TipPayments.Any(p => p.PaymentTransferId == transfer.Id))
+                .ToListAsync(stoppingToken);
+            stoppingToken.ThrowIfCancellationRequested();
+
+            var paymentIdToTransfers = newTipPaymentTransfersToWallet
+                .GroupBy(transfer => transfer.PaymentId.GetValueOrDefault())
+                .ToDictionary(g => g.Key, g => g.ToList());
+            var paymentIds = paymentIdToTransfers.Keys.ToArray();
+            
+            var tips = await lofiContext.Tips
+                .Where(tip => tip.PaymentId != null && paymentIds.Contains(tip.PaymentId.Value))
+                .Include(tip => tip.Track)
+                    .ThenInclude(track => track!.Artists)
+                .ToListAsync(stoppingToken);
+            stoppingToken.ThrowIfCancellationRequested();
+
+            foreach (var tip in tips)
+            {
+                if (tip.PaymentId == null)
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
+                    _logger.LogWarning($"Tip with id {tip.Id} did not have a payment id and hence payments cannot be matched up to it!");
+                    continue;
+                }
 
-                    _logger.LogInformation($"Searching for incoming tip transfers from block height {currentBlockHeight}");
-                    await moneroService.OpenWalletAsync(new OpenWalletRpcParameters(_lofiWalletFile, _lofiWalletPassword), cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var confirmedTransfersResponse = await moneroService.GetTransfers(new GetTransfersRpcParameters
-                    {
-                        In = true,
-                        FilterByHeight = true,
-                        MinHeight = currentBlockHeight
-                    }, cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var mempoolTransfersResponse = await moneroService.GetTransfers(new GetTransfersRpcParameters
-                    {
-                        Pool = true
-                    }, cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
+                if (!paymentIdToTransfers.TryGetValue(tip.PaymentId.Value, out var transfers))
+                {
+                    _logger.LogError($"We detected tip with id {tip.Id} as having recieved a payment, but when we went to pair them up we couldn't find it anymore... this is probably a coding error");
+                    continue;
+                }
 
-                    var transfers = Enumerable.Empty<GetTransfersRpcResult.Transfer>()
-                        .Concat(confirmedTransfersResponse.Result.InTransfers ?? Enumerable.Empty<GetTransfersRpcResult.Transfer>())
-                        .Concat(mempoolTransfersResponse.Result.PoolTransfers ?? Enumerable.Empty<GetTransfersRpcResult.Transfer>())
-                        .ToList();
-                    
-                    if (!transfers.Any())
+                foreach (var transfer in transfers)
+                {
+                    var tipPayment = new TipPayment
                     {
-                        _logger.LogInformation($"Found no incoming transfers to lofi wallet");
-                        continue;
-                    }
-                    _logger.LogInformation($"Found {transfers.Count} incoming transfers to lofi wallet");
-
-                    var paymentIdToTransfer = transfers
-                        .GroupBy(t => Convert.ToUInt16(t.PaymentId, 16))
-                        .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.Timestamp).First());
-                    var paymentIds = paymentIdToTransfer.Select(g => g.Key).ToArray();
-                    _logger.LogInformation($"Looking for unpaid tips with payment ids: {(string.Join(", ", paymentIds.Select(i => i.ToString())))}");
-                    var tips = await lofiContext.Tips
-                        .Where(t => t.Payment == null && t.PaymentId.HasValue && paymentIds.Contains(t.PaymentId.Value))
-                        .Include(t => t.Track)
-                            .ThenInclude(t => t.Artists)
-                        .ToListAsync(cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (!tips.Any())
-                    {
-                        continue;
-                    } 
-
-                    foreach (var tip in tips)
-                    {
-                        var transfer = paymentIdToTransfer[tip.PaymentId!.Value];
-                        var now = DateTime.Now;
-                        tip.Payment = new TipPayment
+                        Tip = tip,
+                        PaymentTransfer = transfer,
+                        CreatedDate = now,
+                        ModifiedDate = now
+                    };
+                    var perArtistPayoutAmount = transfer.Amount / (ulong)tip.Track!.Artists!.Count;
+                    tipPayment.Payouts = tip.Track!.Artists
+                        .Select(artist => new TipPayout
                         {
-                            BlockHeight = transfer.Height,
-                            Amount = transfer.Amount,
-                            TransactionId = transfer.TransactionId,
-                            Timestamp = transfer.Timestamp,
-                            Tip = tip,
+                            TipPayment = tipPayment,
+                            Artist = artist,
+                            Amount = perArtistPayoutAmount,
                             CreatedDate = now,
                             ModifiedDate = now
-                        };
-                        tip.Payouts = tip.Track!.Artists
-                            .Select(artist => new TipPayout
-                            {
-                                Tip = tip,
-                                Artist = artist,
-                                Amount = (ulong)Math.Floor((decimal)transfer.Amount / (decimal)tip.Track.Artists.Count),
-                                CreatedDate = now,
-                                ModifiedDate = now
-                            })
-                            .ToList();
-                        _logger.LogInformation($"Matched tip id {tip.Id} with payment id {tip.PaymentId} ({tip.Payment.Amount} units) to transfer with txid {tip.Payment.TransactionId} at height {transfer.Height}");
-                    }
-
-                    currentBlockHeight = transfers.Max(t => t.Height);
-                    _logger.LogInformation($"Incoming tip transfers up to {currentBlockHeight} have been synched");
-
-                    await lofiContext.SaveChangesAsync(cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
+                        })
+                        .ToList();
+                    tip.Payments.Add(tipPayment);
+                    _logger.LogInformation($"Matched tip {tip.Id} with transfer {transfer.TransactionId} of amount {transfer.Amount}");
+                    _logger.LogInformation($"Divided tip {tip.Id}'s transfer {transfer.TransactionId} of amount {transfer.Amount} between {tip.Track!.Artists!.Count} artists, resulting in a payout of {perArtistPayoutAmount} each.");
                 }
             }
-            catch (Exception ex)
+
+            await lofiContext.SaveChangesAsync();
+        }
+
+        private async Task ScanForTipPayments(TimeSpan? pause = null, DateTime? now = null, CancellationToken stoppingToken = default)
+        {
+            var delay = pause.GetValueOrDefault(TimeSpan.FromSeconds(1));
+
+            foreach (var wallet in _wallets)
             {
-                _logger.LogError(ex.Message + "\n" + ex.StackTrace);
+                if (string.IsNullOrWhiteSpace(wallet.Filename))
+                {
+                    _logger.LogWarning($"A wallet was configured with no filename");
+                    continue;
+                }
+
+                try
+                {
+                    _logger.LogInformation($"Scanning for tip payments into wallet {wallet.Filename}");
+                    await ScanForTipPaymentsInWallet(walletFilename: wallet.Filename, walletPassword: wallet.Password ?? string.Empty, now, stoppingToken);
+                }
+                catch (Exception error)
+                {
+                    _logger.LogError($"An unhandled exception occured when searching for tip payments into wallet {wallet.Filename}: {error}\n{error.StackTrace}");
+                }
+
+                await Task.Delay(delay);
             }
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Tip Payment Confirmation service is shutting down");
-            return Task.CompletedTask;
+            while (true)
+            {
+                try
+                {
+                    await ScanForTipPayments(pause: TimeSpan.FromSeconds(1), now: DateTime.Now, stoppingToken);
+                }
+                catch (Exception error)
+                {
+                    _logger.LogError($"An unhandled exception occured when searching for tip payments: {error}\n{error.StackTrace}");
+                }
+            }
         }
     }
 }

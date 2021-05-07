@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -66,7 +68,7 @@ namespace Lofi.API.Tests
             var spendableBalance = await moneroService.PerformWalletRpc<GetBalanceRpcParameters, GetBalanceRpcResult>(
                 MoneroWalletRpcMethod.GET_BALANCE,
                 new GetBalanceRpcParameters(0),
-                walletFilename: "artistwallet",
+                walletFilename: "lofiartist-test",
                 walletPassword: "");
             spendableBalance.Error.Should().BeNull();
             var tipAmount = spendableBalance.Result.UnlockedBalance / 1000;
@@ -89,7 +91,7 @@ namespace Lofi.API.Tests
                     {
                         new TransferRpcParameters.TransferDestination(tipAmount, address)
                     }),
-                walletFilename: "artistwallet",
+                walletFilename: "lofiartist-test",
                 walletPassword: "");
             transfer.Error.Should().BeNull();
             transfer.Result.Amount.Should().Be(tipAmount);

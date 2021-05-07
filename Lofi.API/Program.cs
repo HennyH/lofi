@@ -27,6 +27,7 @@ namespace Lofi.API
                 {
                     services.AddHostedService<TipPaymentConfirmationService>();
                     services.AddHostedService<TipPayoutService>();
+                    services.AddHostedService<TransferSynchronizationService>();
                 });
     }
 }
