@@ -35,7 +35,7 @@ namespace Lofi.API.Tests
             var ignatiusPressArtistId = await ArtistActions.CreateArtist(
                 _client,
                 name: "Ignatius Press",
-                walletAddress: "9vC4nbfq9m8ZkHxyEpHJPietBrUpRCMtK9zH4gAeZYW9W38rFGtjBKuAGN782nNz8P8xVcGZFVwXN7xedjHu1JqVBTfnnWw");
+                walletAddress: "9xtzsrwHQvRMj7ycxiXNRF74UXK5vyvs3jFpnE2hFXA24EVGWCDGAp3KNmBq4ahneZ1tRw3s2JfySas4dEBsMenvQ5V2cPM");
             _ignatiusPressArtist = await ArtistActions.GetArtist(_client, ignatiusPressArtistId);
             var adoremusHymnalAlbumId = await AlbumActions.CreateAlbum(
                 _client,
@@ -103,7 +103,7 @@ namespace Lofi.API.Tests
                 var tip = await getTipResponse.DeserializeAsJson<TipDto>();
                 if (tip == null || tip.PaymentTransactionId == null) return (false, default);
                 return (true, tip);
-            }, timeout: TimeSpan.FromMinutes(2));
+            }, timeout: TimeSpan.FromMinutes(5));
             wasTipPayed.Should().BeTrue();
             tip!.PaymentTransactionId.Should().NotBeNullOrWhiteSpace();
 
@@ -114,7 +114,7 @@ namespace Lofi.API.Tests
                 if (tip == null || tip.PaymentTransactionId == null) return (false, default);
                 if (tip.PayoutAmount == null) return (false, default);
                 return (true, tip);
-            }, timeout: TimeSpan.FromMinutes(2));
+            }, timeout: TimeSpan.FromMinutes(5));
             wasArtistPayed.Should().BeTrue();
             payedOutTip!.PayoutAmount.Should().BeGreaterThan(0);
         }

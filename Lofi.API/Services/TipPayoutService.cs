@@ -76,14 +76,14 @@ namespace Lofi.API.Services
             }
         }
 
-        private async Task<IReadOnlyCollection<GetTransferByTransactionIdRpcResult.GetTransferTransfer>> GetTransfersForTransactionIds(MoneroService moneroService, IEnumerable<string> transactionIds)
+        private async Task<IReadOnlyCollection<GetTransferByTransactionIdRpcResult.GetTransferTransfer>> GetTransfersForTransactionIds(string walletFilename, string walletPassword, MoneroService moneroService, IEnumerable<string> transactionIds)
         {
             var transfers = new List<GetTransferByTransactionIdRpcResult.GetTransferTransfer>();
             foreach (var transactionId in transactionIds)
             {
                 var response = await moneroService.GetTransferByTransactionId(new GetTransferByTransactionIdRpcParameters(
                     transactionId: transactionId
-                ));
+                ), walletFilename: walletFilename, walletPassword: walletPassword);
 
                 if (response.Error != null)
                 {
@@ -99,7 +99,7 @@ namespace Lofi.API.Services
             return transfers;
         }
 
-        private async Task<IEnumerable<FeeAdjustedPayoutSet>> AdjustPayoutSetsToAccountForTransactionFeesAsync(MoneroService moneroService, IReadOnlyCollection<PayoutSet> payoutSets, CancellationToken cancellationToken)
+        private async Task<IEnumerable<FeeAdjustedPayoutSet>> AdjustPayoutSetsToAccountForTransactionFeesAsync(string walletFilename, string walletPassword, MoneroService moneroService, IReadOnlyCollection<PayoutSet> payoutSets, CancellationToken cancellationToken)
         {
             var estimatedSplitTransfer = await moneroService.SplitTransfer(new SplitTransferRpcParameters(
                 destinations: payoutSets.Select(payoutSet => new TransferRpcParameters.TransferDestination(
@@ -107,7 +107,7 @@ namespace Lofi.API.Services
                     address: payoutSet.Address
                 )),
                 doNotRelay: true
-            ), cancellationToken: cancellationToken);
+            ), walletFilename: walletFilename, walletPassword: walletPassword, cancellationToken: cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             var sharedTransactionFee = (ulong)estimatedSplitTransfer.Result.Fees.Sum(fee => (decimal)fee);
             var perDestinationFeeShare = (ulong)((decimal)sharedTransactionFee / (decimal)payoutSets.Count);
@@ -127,9 +127,9 @@ namespace Lofi.API.Services
             return feeAdjustedPayoutSets;
         }
 
-        private async Task SyncPayoutsToMatchingTransactionsAsync(LofiContext lofiContext, MoneroService moneroService, IEnumerable<FeeAdjustedPayoutSet> feeAdjustedPayoutSets, IEnumerable<string> transactionIds)
+        private async Task SyncPayoutsToMatchingTransactionsAsync(string walletFilename, string walletPassword, LofiContext lofiContext, MoneroService moneroService, IEnumerable<FeeAdjustedPayoutSet> feeAdjustedPayoutSets, IEnumerable<string> transactionIds)
         {
-            var transfers = await GetTransfersForTransactionIds(moneroService, transactionIds);
+            var transfers = await GetTransfersForTransactionIds(walletFilename, walletPassword, moneroService, transactionIds);
             var destinationAddressToTransfer = transfers
                 .SelectMany(transfer => transfer.Destinations.Select(destination => (Address: destination.Address, Transfer: transfer)))
                 .ToDictionary(x => x.Address, x => x.Transfer);
@@ -142,17 +142,20 @@ namespace Lofi.API.Services
                     continue;
                 }
 
+                var receipt = new TipPayoutReceipt
+                {
+                    TransactionId = transfer.TransactionId,
+                    NetPayoutAmount = payoutSet.FeeAdjustedAmount,
+                    PayoutTxFee = transfer.Fee,
+                    PayoutTxFeeShare = payoutSet.TransactionFeeShare,
+                    CreatedDate = now,
+                    ModifiedDate = now
+                };
+                lofiContext.TipPayoutReceipts.Add(receipt);
+
                 foreach (var payout in payoutSet.Payouts)
                 {
-                    payout.Receipt = new TipPayoutReceipt
-                    {
-                        TransactionId = transfer.TransactionId,
-                        NetPayoutAmount = payoutSet.FeeAdjustedAmount,
-                        PayoutTxFee = transfer.Fee,
-                        PayoutTxFeeShare = payoutSet.TransactionFeeShare,
-                        CreatedDate = now,
-                        ModifiedDate = now
-                    };
+                    payout.Receipt = receipt;
                 }
             }
         }
@@ -181,7 +184,7 @@ namespace Lofi.API.Services
             if (!payouts.Any()) return;
 
             var payoutSets = GroupPayoutsIntoSetsByWalletAddress(payouts).ToList();
-            var feeAdjustedPayoutSets = await AdjustPayoutSetsToAccountForTransactionFeesAsync(moneroService, payoutSets, stoppingToken);
+            var feeAdjustedPayoutSets = await AdjustPayoutSetsToAccountForTransactionFeesAsync(walletFilename, walletPassword, moneroService, payoutSets, stoppingToken);
 
             // TODO(HH): We should probably actually do this as a doNotRelay: true, and then save the hex data to
             // the the recipet entity, then have a seperate service send out the tx... maybe? The idea is that if
@@ -195,7 +198,7 @@ namespace Lofi.API.Services
                 getTransactionHex: true,
                 getTransactionMetadata: true,
                 getTransactionKey: true
-            ));
+            ), walletFilename: walletFilename, walletPassword: walletPassword);
             if (transferResponse.Error != null)
             {
                 _logger.LogError($"There was an error submitting the payout transfer: {transferResponse.Error.Code} - {transferResponse.Error.Message}");
@@ -203,7 +206,7 @@ namespace Lofi.API.Services
             }
             var transactionIds = transferResponse.Result.TransactionHashes;
 
-            await SyncPayoutsToMatchingTransactionsAsync(lofiContext, moneroService, feeAdjustedPayoutSets, transactionIds);
+            await SyncPayoutsToMatchingTransactionsAsync(walletFilename, walletPassword, lofiContext, moneroService, feeAdjustedPayoutSets, transactionIds);
             await lofiContext.SaveChangesAsync();
             _logger.LogInformation($"Paid out {payouts.Count} tips using wallet {walletFilename}");
         }
@@ -224,6 +227,10 @@ namespace Lofi.API.Services
                 {
                     _logger.LogInformation($"Trying to pay out tips using wallet {wallet.Filename}");
                     await PayoutTipsUsingWallet(walletFilename: wallet.Filename, walletPassword: wallet.Password ?? string.Empty, now, stoppingToken);
+                }
+                catch (TaskCanceledException)
+                {
+                    throw;
                 }
                 catch (Exception error)
                 {

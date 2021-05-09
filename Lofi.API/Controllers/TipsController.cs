@@ -59,10 +59,22 @@ namespace Lofi.API.Controllers
                     ? (ulong)tip.Payments.Sum(payment => (decimal)payment.PaymentTransfer!.Amount.GetValueOrDefault())
                     : 0,
                 IntegratedPaymentAddress = tip.IntegratedPaymentAddress,
+                PaymentTransactionId = tip.Payments
+                    .SelectMany(p => p.Payouts)
+                    .Select(p => p.Receipt)
+                    .Where(r => r != null)
+                    .GroupBy(r => r.Id)
+                    .Select(g => g.FirstOrDefault())
+                    .FirstOrDefault()
+                    ?.TransactionId,
                 // PaymentBlockHeight = tip.Payment?.BlockHeight,
-                // PayoutAmount = tip.Payouts?.Where(p => p.Receipt != null)?.Any() == true
-                //     ? (ulong?)(tip.Payouts?.Where(p => p.Receipt != null)?.Select(p => p.Receipt!.NetPayoutAmount)?.Sum(a => (decimal?)a ?? 0m))
-                //     : null,
+                PayoutAmount = (ulong)tip.Payments
+                    .SelectMany(p => p.Payouts)
+                    .Select(p => p.Receipt)
+                    .Where(r => r != null)
+                    .GroupBy(r => r.Id)
+                    .Select(g => g.FirstOrDefault())
+                    .Sum(r => (decimal)r.NetPayoutAmount.GetValueOrDefault(0))
                 // PayoutTxFeeShare = tip.Payouts?.Where(p => p.Receipt != null)?.Any() == true
                 //     ? (ulong)(tip.Payouts?.Where(p => p.Receipt != null)?.Select(p => p.Receipt!.NetPayoutAmount)?.Sum(a => (decimal?)a) ?? 0m)
                 //     : null

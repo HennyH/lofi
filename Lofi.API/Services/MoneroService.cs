@@ -84,8 +84,11 @@ namespace Lofi.API.Services
                             var response = JsonSerializer.Deserialize<MoneroRpcResponse<RpcResults.EmptyRpcResult>>(json);
                             if (response == null || response.Error != null)
                             {
-                                throw new Exception("Unable to open wallet");
+                                // throw new Exception("Unable to open wallet");
                             }
+
+                            var recsan = new MoneroRpcRequest<RpcResults.EmptyRpcResult>("rescan_spent", new RpcResults.EmptyRpcResult());
+                            var rescanResponse = await _httpClient.PostAsync(_walletRpcUri, recsan.AsHttpContent(), cancellationToken);
                         },
                         cancellationToken,
                         TaskContinuationOptions.None,
